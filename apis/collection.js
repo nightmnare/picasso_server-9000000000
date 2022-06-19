@@ -223,7 +223,7 @@ router.post("/collectiondetails", auth, async (req, res) => {
     let newCollection = await _collection.save();
     if (newCollection) {
       // notify admin about a new app
-      if (!isInternal[0]) {
+      if (!isInternal[0]) {        
         applicationMailer.notifyAdminForNewCollectionApplication(); //notify admin
         applicationMailer.notifyInternalCollectionDeployment(
           erc721Address,
@@ -354,6 +354,7 @@ router.post("/reviewApplication", admin_auth, async (req, res) => {
           status: "success",
         });
       }
+
       // validate royalty to range in o to 100
       if (royalty > 10000 || royalty < 0) {
         // deny -- remove from collection and send email
@@ -369,6 +370,7 @@ router.post("/reviewApplication", admin_auth, async (req, res) => {
           status: "success",
         });
       }
+      console.log("sdfsdf",collection)
 
       try {
         // now update the collection fee
