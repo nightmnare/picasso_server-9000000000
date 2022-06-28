@@ -7,6 +7,8 @@ const ERC1155CONTRACT = mongoose.model("ERC1155CONTRACT");
 const NFTITEM = mongoose.model("NFTITEM");
 const Collection = mongoose.model("Collection");
 const Account = mongoose.model("Account");
+const Follows = mongoose.model("Follows");
+const Likes = mongoose.model("Likes");
 const ERC1155HOLDING = mongoose.model("ERC1155HOLDING");
 const Category = mongoose.model("Category");
 const Bid = mongoose.model("Bid");
@@ -224,11 +226,15 @@ router.get("/getActivityInfo", async (req, res) => {
   let offers = [];
   let listings = [];
   let sold = [];
+  let follow = [];
+  let likes = [];
 
   let allBids = await Bid.find({});
   let allOffers = await Offer.find({});
   let allLists = await Listing.find({});
   let allSales = await TradeHistory.find({});
+  let allFollows = await Follows.find({});
+  let allLikes = await Likes.find({});
 
   if (allBids) {
     let bidsPromise = allBids.map(async (bfa) => {
@@ -240,19 +246,12 @@ router.get("/getActivityInfo", async (req, res) => {
         let account = await getAccountInfo(token.owner);
         bids.push({
           event: "Bid",
-          contractAddress: token.contractAddress,
-          tokenID: token.tokenID,
           name: token.name,
-          tokenURI: token.tokenURI,
-          thumbnailPath: token.thumbnailPath,
           imageURL: token.imageURL,
-          to: token.owner,
           price: bfa.bid,
           paymentToken: bfa.paymentToken,
-          quantity: bfa.quantity,
           createdAt: bfa._id.getTimestamp(),
-          alias: account ? account[0] : null,
-          image: account ? account[1] : null,
+          alias: account ? account[0] : account[2],
         });
       }
     });
@@ -269,19 +268,12 @@ router.get("/getActivityInfo", async (req, res) => {
         let account = await getAccountInfo(token.owner);
         offers.push({
           event: "Offer",
-          contractAddress: token.contractAddress,
-          tokenID: token.tokenID,
           name: token.name,
-          tokenURI: token.tokenURI,
-          thumbnailPath: token.thumbnailPath,
           imageURL: token.imageURL,
-          to: token.owner,
-          quantity: ofa.quantity,
           price: ofa.pricePerItem,
           paymentToken: ofa.paymentToken,
           createdAt: ofa._id.getTimestamp(),
           alias: account ? account[0] : null,
-          image: account ? account[1] : null,
         });
       }
     });
@@ -297,19 +289,12 @@ router.get("/getActivityInfo", async (req, res) => {
         let account = await getAccountInfo(token.owner);
         listings.push({
           event: "Listing",
-          contractAddress: token.contractAddress,
-          tokenID: token.tokenID,
           name: token.name,
-          tokenURI: token.tokenURI,
-          thumbnailPath: token.thumbnailPath,
           imageURL: token.imageURL,
-          to: token.owner,
-          quantity: lfa.quantity,
           price: lfa.price,
           paymentToken: lfa.paymentToken,
           createdAt: lfa._id.getTimestamp(),
           alias: account ? account[0] : null,
-          image: account ? account[1] : null,
         });
       }
     });
@@ -327,23 +312,56 @@ router.get("/getActivityInfo", async (req, res) => {
         let account = await getAccountInfo(sfa.to);
         sold.push({
           event: "Sold",
-          contractAddress: token.contractAddress,
-          tokenID: token.tokenID,
           name: token.name,
-          tokenURI: token.tokenURI,
-          thumbnailPath: token.thumbnailPath,
           imageURL: token.imageURL,
-          to: sfa.to,
-          quantity: sfa.value,
           price: sfa.price,
           paymentToken: sfa.paymentToken,
           createdAt: sfa._id.getTimestamp(),
           alias: account ? account[0] : null,
-          image: account ? account[1] : null,
         });
       }
     });
     await Promise.all(soldPromise);
+  }
+
+  if (allFollows) {
+    let followPromise = allFollows.map(async (fow) => {
+      let toAccount = getAccountInfo(fow.to);
+      let fromAccount = getAccountInfo(fow.from);
+      let imageURL = toAccount ? toAccount[1] : null;
+      let name = toAccount ? toAccount[0] : toAccount[2];
+      follow.push({
+        event: "Followed",
+        name: toAccount ? toAccount[0] : toAccount[2],
+        imageURL: toAccount ? toAccount[1] : null,
+        createdAt: fow._id.getTimestamp(),
+        alias: fromAccount ? fromAccount[0] : fromAccount[2],
+      });
+    });
+    await Promise.all(followPromise);
+  }
+
+  if (allLikes) {
+    let likePromise = allLikes.map(async (lik) => {
+      let token = await NFTITEM.findOne({
+        contractAddress: lik.contractAddress,
+        tokenID: lik.tokenID,
+      });
+
+      if (token) {
+        let account = await getAccountInfo(lik.follower);
+        likes.push({
+          event: "Sold",
+          name: token.name,
+          imageURL: token.imageURL,
+          price: lik.price,
+          paymentToken: lik.paymentToken,
+          createdAt: lik._id.getTimestamp(),
+          alias: account ? account[0] : null,
+        });
+      }
+    });
+    await Promise.all(likePromise);
   }
 
   return res.json({
@@ -353,6 +371,8 @@ router.get("/getActivityInfo", async (req, res) => {
       offers,
       listings,
       sold,
+      follow,
+      likes,
     },
   });
 });
@@ -708,7 +728,7 @@ const getAccountInfo = async (address) => {
   try {
     let account = await Account.findOne({ address: address });
     if (account) {
-      return [account.alias, account.imageHash];
+      return [account.alias, account.imageHash, account.address];
     } else {
       return null;
     }
