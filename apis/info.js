@@ -252,6 +252,7 @@ router.get("/getActivityInfo", async (req, res) => {
           paymentToken: bfa.paymentToken,
           createdAt: bfa._id.getTimestamp(),
           alias: account ? account[0] : account[2],
+          operator: token.owner,
         });
       }
     });
@@ -274,6 +275,7 @@ router.get("/getActivityInfo", async (req, res) => {
           paymentToken: ofa.paymentToken,
           createdAt: ofa._id.getTimestamp(),
           alias: account ? account[0] : null,
+          operator: token.owner,
         });
       }
     });
@@ -295,6 +297,7 @@ router.get("/getActivityInfo", async (req, res) => {
           paymentToken: lfa.paymentToken,
           createdAt: lfa._id.getTimestamp(),
           alias: account ? account[0] : null,
+          operator: token.owner,
         });
       }
     });
@@ -318,6 +321,7 @@ router.get("/getActivityInfo", async (req, res) => {
           paymentToken: sfa.paymentToken,
           createdAt: sfa._id.getTimestamp(),
           alias: account ? account[0] : null,
+          operator: token.owner,
         });
       }
     });
@@ -330,10 +334,11 @@ router.get("/getActivityInfo", async (req, res) => {
       let fromAccount = await getAccountInfo(fow.from);
       follow.push({
         event: "Followed",
-        name: toAccount ? toAccount[0] : toAccount[2],
+        name: toAccount && toAccount[0] ? toAccount[0] : fow.to,
         imageURL: toAccount ? toAccount[1] : null,
         createdAt: fow._id.getTimestamp(),
-        alias: fromAccount ? fromAccount[0] : fromAccount[2],
+        alias: fromAccount ? fromAccount[0] : null,
+        operator: fow.from,
       });
     });
     await Promise.all(followPromise);
@@ -352,10 +357,9 @@ router.get("/getActivityInfo", async (req, res) => {
           event: "Sold",
           name: token.name,
           imageURL: token.imageURL,
-          price: lik.price,
-          paymentToken: lik.paymentToken,
           createdAt: lik._id.getTimestamp(),
-          alias: account ? account[0] : account[2],
+          alias: account ? account[0] : null,
+          operator: lik.follower,
         });
       }
     });
@@ -726,7 +730,7 @@ const getAccountInfo = async (address) => {
   try {
     let account = await Account.findOne({ address: address });
     if (account) {
-      return [account.alias, account.imageHash, account.address];
+      return [account.alias, account.imageHash];
     } else {
       return null;
     }
