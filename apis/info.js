@@ -326,10 +326,8 @@ router.get("/getActivityInfo", async (req, res) => {
 
   if (allFollows) {
     let followPromise = allFollows.map(async (fow) => {
-      let toAccount = getAccountInfo(fow.to);
-      let fromAccount = getAccountInfo(fow.from);
-      let imageURL = toAccount ? toAccount[1] : null;
-      let name = toAccount ? toAccount[0] : toAccount[2];
+      let toAccount = await getAccountInfo(fow.to);
+      let fromAccount = await getAccountInfo(fow.from);
       follow.push({
         event: "Followed",
         name: toAccount ? toAccount[0] : toAccount[2],
@@ -357,7 +355,7 @@ router.get("/getActivityInfo", async (req, res) => {
           price: lik.price,
           paymentToken: lik.paymentToken,
           createdAt: lik._id.getTimestamp(),
-          alias: account ? account[0] : null,
+          alias: account ? account[0] : account[2],
         });
       }
     });
