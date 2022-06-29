@@ -40,13 +40,16 @@ router.post("/isERC721Contract", async (req, res) => {
 });
 
 router.get("/getAllERC721Contracts", async (req, res) => {
-  let all = await ERC721CONTRACT.find();
-  let addresses = [];
-  all.map((sc) => {
-    addresses.push(sc.address);
-  });
-
-  return res.json(addresses);
+  try {
+    let all = await ERC721CONTRACT.find();
+    let addresses = [];
+    all.map((sc) => {
+      addresses.push(sc.address);
+    });
+    return res.status(200).json({data: addresses, status:"success"});
+  } catch(error){
+    return res.status(400).json({status:"failed"});
+  }
 });
 
 module.exports = router;
