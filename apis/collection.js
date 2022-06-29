@@ -223,7 +223,7 @@ router.post("/collectiondetails", auth, async (req, res) => {
     let newCollection = await _collection.save();
     if (newCollection) {
       // notify admin about a new app
-      if (!isInternal[0]) {        
+      if (!isInternal[0]) {
         applicationMailer.notifyAdminForNewCollectionApplication(); //notify admin
         applicationMailer.notifyInternalCollectionDeployment(
           erc721Address,
@@ -300,6 +300,17 @@ router.post("/getReviewApplications", admin_auth, async (req, res) => {
   }
 });
 
+router.get("/getCreator/:address", async (req, res) => {
+  const address = toLowerCase(req.params.address);
+  let collection = await Collection.findOne({
+    erc721Address: address,
+  });
+  res.json({
+    status: "success",
+    creator: collection.feeRecipient,
+  });
+});
+
 // need to update the smart contract with royalty
 
 router.post("/reviewApplication", admin_auth, async (req, res) => {
@@ -370,7 +381,7 @@ router.post("/reviewApplication", admin_auth, async (req, res) => {
           status: "success",
         });
       }
-      console.log("sdfsdf",collection)
+      console.log("sdfsdf", collection);
 
       try {
         // now update the collection fee
