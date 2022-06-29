@@ -79,6 +79,15 @@ const pinAccountAvatar = async (account, imgData, userName, address, res) => {
   }
 };
 
+router.get("/allaccountinfo", async (req, res) => {
+  let accounts = await Account.find({});
+  console.log(accounts);
+  return res.json({
+    status: "success",
+    data: accounts,
+  });
+});
+
 // update the account alias or if not registered, create a new account
 router.post("/accountdetails", auth, async (req, res) => {
   let form = new formidable.IncomingForm();
