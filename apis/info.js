@@ -354,7 +354,7 @@ router.get("/getActivityInfo", async (req, res) => {
       if (token) {
         let account = await getAccountInfo(lik.follower);
         likes.push({
-          event: "Sold",
+          event: "Like",
           name: token.name,
           imageURL: token.imageURL,
           createdAt: lik._id.getTimestamp(),
