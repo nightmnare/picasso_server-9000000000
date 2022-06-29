@@ -7,6 +7,7 @@ const ethers = require("ethers");
 const mongoose = require("mongoose");
 const Collection = mongoose.model("Collection");
 const Category = mongoose.model("Category");
+const Account = mongoose.model("Account");
 const ERC1155CONTRACT = mongoose.model("ERC1155CONTRACT");
 const ERC721CONTRACT = mongoose.model("ERC721CONTRACT");
 
@@ -223,7 +224,7 @@ router.post("/collectiondetails", auth, async (req, res) => {
     let newCollection = await _collection.save();
     if (newCollection) {
       // notify admin about a new app
-      if (!isInternal[0]) {        
+      if (!isInternal[0]) {
         applicationMailer.notifyAdminForNewCollectionApplication(); //notify admin
         applicationMailer.notifyInternalCollectionDeployment(
           erc721Address,
@@ -291,6 +292,35 @@ router.post("/getReviewApplications", admin_auth, async (req, res) => {
     return res.json({
       status: "success",
       data: applications,
+    });
+  } catch (error) {
+    Logger.error(error);
+    return res.json({
+      status: "failed",
+    });
+  }
+});
+
+router.get("/getCreator/:address", async (req, res) => {
+  const address = toLowerCase(req.params.address);
+  let collection = await Collection.findOne({
+    erc721Address: address,
+  });
+  res.json({
+    status: "success",
+    creator: collection.feeRecipient,
+  });
+});
+
+router.post("/getCreatorAndOwnerInfo", async (req, res) => {
+  try {
+    const { creator, owner } = req.body;
+    console.log(creator, owner);
+    const creatorInfo = await getAccountInfo(creator);
+    const ownerInfo = await getAccountInfo(owner);
+    res.json({
+      creator: creatorInfo,
+      owner: ownerInfo,
     });
   } catch (error) {
     Logger.error(error);
@@ -370,7 +400,7 @@ router.post("/reviewApplication", admin_auth, async (req, res) => {
           status: "success",
         });
       }
-      console.log("sdfsdf",collection)
+      console.log("sdfsdf", collection);
 
       try {
         // now update the collection fee
@@ -572,6 +602,20 @@ const updateMarketplaceRoyalty = async (collection, receipient, fee) => {
 
 const updateAuctionRoyalty = async (collection, receipient, fee) => {
   fee = fee * 100;
+};
+
+const getAccountInfo = async (address) => {
+  try {
+    let account = await Account.findOne({ address: address });
+    if (account) {
+      return [account.alias, account.imageHash];
+    } else {
+      return null;
+    }
+  } catch (error) {
+    Logger.error(error);
+    return null;
+  }
 };
 
 module.exports = router;
