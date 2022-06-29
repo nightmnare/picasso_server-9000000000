@@ -83,6 +83,7 @@ router.get("/getCollections", async (_, res) => {
       isVisible: true,
       isInternal: collection.isInternal,
       isOwnerble: collection.isOwnerble,
+      owner: collection.owner
     });
   });
 
