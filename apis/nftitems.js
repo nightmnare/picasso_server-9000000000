@@ -159,6 +159,15 @@ const sortItems = (_allTokens, sortby) => {
   return tmp;
 };
 
+router.get('/getTopTokens', async(req,res)=>{
+  try{
+    const tokens = await NFTITEM.find().sort({liked: -1}).limit(8);
+    return res.status(200).send({data: tokens, status:"success"});
+  }catch(error){
+    return res.status(400).send({status: "failed"});
+  }
+})
+
 const isIncludedInArray = (array, target) => {
   let hash = {};
   for (let i = 0; i < array.length; ++i) {
@@ -895,6 +904,15 @@ router.post('/transfer1155History', async (req, res) => {
     });
   }
 });
+
+router.get('/getAllnfts', async (req, res) => {
+  try{
+    const nfts = await NFTITEM.find();
+    return res.status(200).json({status: "success", data: nfts});
+  }catch (error) {
+    return res.status(400).json({status: "failed"});
+  }
+})
 
 router.post('/getSingleItemDetails', async (req, res) => {
   try {
