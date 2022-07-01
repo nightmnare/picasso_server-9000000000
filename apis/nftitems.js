@@ -1,39 +1,39 @@
-require('dotenv').config();
-const router = require('express').Router();
-const ethers = require('ethers');
+require("dotenv").config();
+const router = require("express").Router();
+const ethers = require("ethers");
 
-const mongoose = require('mongoose');
-const NFTITEM = mongoose.model('NFTITEM');
-const ERC1155HOLDING = mongoose.model('ERC1155HOLDING');
-const Category = mongoose.model('Category');
-const Collection = mongoose.model('Collection');
-const Listing = mongoose.model('Listing');
-const Offer = mongoose.model('Offer');
-const Bid = mongoose.model('Bid');
-const Auction = mongoose.model('Auction');
-const Account = mongoose.model('Account');
-const BundleInfo = mongoose.model('BundleInfo');
-const Bundle = mongoose.model('Bundle');
-const BundleListing = mongoose.model('BundleListing');
-const BundleOffer = mongoose.model('BundleOffer');
-const TradeHistory = mongoose.model('TradeHistory');
-const UnlockableContents = mongoose.model('UnlockableContents');
-const DisabledExplorerCollection = mongoose.model('DisabledExplorerCollection');
+const mongoose = require("mongoose");
+const NFTITEM = mongoose.model("NFTITEM");
+const ERC1155HOLDING = mongoose.model("ERC1155HOLDING");
+const Category = mongoose.model("Category");
+const Collection = mongoose.model("Collection");
+const Listing = mongoose.model("Listing");
+const Offer = mongoose.model("Offer");
+const Bid = mongoose.model("Bid");
+const Auction = mongoose.model("Auction");
+const Account = mongoose.model("Account");
+const BundleInfo = mongoose.model("BundleInfo");
+const Bundle = mongoose.model("Bundle");
+const BundleListing = mongoose.model("BundleListing");
+const BundleOffer = mongoose.model("BundleOffer");
+const TradeHistory = mongoose.model("TradeHistory");
+const UnlockableContents = mongoose.model("UnlockableContents");
+const DisabledExplorerCollection = mongoose.model("DisabledExplorerCollection");
 
-const orderBy = require('lodash.orderby');
-const toLowerCase = require('../utils/utils');
+const orderBy = require("lodash.orderby");
+const toLowerCase = require("../utils/utils");
 
-const { getPrice } = require('../services/price.feed');
-const sortBy = require('lodash.sortby');
-const Logger = require('../services/logger');
-const { MAX_INTEGER } = require('ethereumjs-util');
+const { getPrice } = require("../services/price.feed");
+const sortBy = require("lodash.sortby");
+const Logger = require("../services/logger");
+const { MAX_INTEGER } = require("ethereumjs-util");
 
 const provider = new ethers.providers.JsonRpcProvider(
   process.env.NETWORK_RPC,
   parseInt(process.env.NETWORK_CHAINID)
 );
 
-const nonImage = 'non-image';
+const nonImage = "non-image";
 
 const formatPrice = (price = 0, payToken) => {
   if (
@@ -56,25 +56,25 @@ const updatePrices = (items) => {
   return items;
 };
 
-router.post('/increaseViews', async (req, res) => {
+router.post("/increaseViews", async (req, res) => {
   try {
     let contractAddress = req.body.contractAddress;
     contractAddress = toLowerCase(contractAddress);
     let tokenID = parseInt(req.body.tokenID);
     let token = await NFTITEM.findOne({
       contractAddress: contractAddress,
-      tokenID: tokenID
+      tokenID: tokenID,
     });
     token.viewed = token.viewed + 1;
     let _token = await token.save();
     return res.json({
-      status: 'success',
-      data: _token.viewed
+      status: "success",
+      data: _token.viewed,
     });
   } catch (error) {
     Logger.error(error);
     return res.status(400).json({
-      status: 'failed'
+      status: "failed",
     });
   }
 });
@@ -82,67 +82,67 @@ router.post('/increaseViews', async (req, res) => {
 const sortItems = (_allTokens, sortby) => {
   let tmp = [];
   switch (sortby) {
-    case 'createdAt': {
+    case "createdAt": {
       tmp = orderBy(
         _allTokens,
         ({ createdAt }) => createdAt || new Date(1970, 1, 1),
-        ['desc']
+        ["desc"]
       );
       break;
     }
-    case 'oldest': {
+    case "oldest": {
       tmp = orderBy(
         _allTokens,
         ({ createdAt }) => createdAt || new Date(1970, 1, 1),
-        ['asc']
+        ["asc"]
       );
       break;
     }
-    case 'price': {
+    case "price": {
       tmp = orderBy(
         _allTokens,
         ({ currentPriceInUSD }) => currentPriceInUSD || 0,
-        ['desc']
+        ["desc"]
       );
       break;
     }
-    case 'cheapest': {
+    case "cheapest": {
       tmp = orderBy(
         _allTokens,
         ({ currentPriceInUSD }) => currentPriceInUSD || MAX_INTEGER,
-        ['asc']
+        ["asc"]
       );
       break;
     }
-    case 'lastSalePrice': {
+    case "lastSalePrice": {
       tmp = orderBy(
         _allTokens,
         ({ lastSalePriceInUSD }) => lastSalePriceInUSD || 0,
-        ['desc']
+        ["desc"]
       );
       break;
     }
-    case 'viewed': {
-      tmp = orderBy(_allTokens, ({ viewed }) => viewed || 0, ['desc']);
+    case "viewed": {
+      tmp = orderBy(_allTokens, ({ viewed }) => viewed || 0, ["desc"]);
       break;
     }
-    case 'listedAt': {
+    case "listedAt": {
       tmp = orderBy(
         _allTokens,
         ({ listedAt }) => listedAt || new Date(1970, 1, 1),
-        ['desc']
+        ["desc"]
       );
       break;
     }
-    case 'soldAt': {
+    case "soldAt": {
       tmp = orderBy(
         _allTokens,
         ({ soldAt }) => soldAt || new Date(1970, 1, 1),
-        ['desc']
+        ["desc"]
       );
       break;
     }
-    case 'saleEndsAt': {
+    case "saleEndsAt": {
       tmp = orderBy(
         _allTokens,
         ({ saleEndsAt }) =>
@@ -151,7 +151,7 @@ const sortItems = (_allTokens, sortby) => {
               ? saleEndsAt - new Date()
               : 1623424669
             : 1623424670,
-        ['asc']
+        ["asc"]
       );
       break;
     }
@@ -159,14 +159,14 @@ const sortItems = (_allTokens, sortby) => {
   return tmp;
 };
 
-router.get('/getTopTokens', async(req,res)=>{
-  try{
-    const tokens = await NFTITEM.find().sort({liked: -1}).limit(8);
-    return res.status(200).send({data: tokens, status:"success"});
-  }catch(error){
-    return res.status(400).send({status: "failed"});
+router.get("/getTopTokens", async (req, res) => {
+  try {
+    const tokens = await NFTITEM.find().sort({ liked: -1 }).limit(8);
+    return res.status(200).send({ data: tokens, status: "success" });
+  } catch (error) {
+    return res.status(400).send({ status: "failed" });
   }
-})
+});
 
 const isIncludedInArray = (array, target) => {
   let hash = {};
@@ -190,39 +190,39 @@ const selectTokens = async (req, res) => {
     const filters = req.body.filterby; //status -> array or null
     // create a sort by option
     const selectOption = [
-      'contractAddress',
-      'contentType',
-      'tokenID',
-      'tokenURI',
-      'tokenType',
-      'thumbnailPath',
-      'name',
-      'imageURL',
-      'supply',
-      'price',
-      'paymentToken',
-      'priceInUSD',
-      'liked',
-      'isAppropriate',
-      'saleEndsAt',
-      'createdAt',
-      'lastSalePricePaymentToken',
-      'lastSalePriceInUSD',
-      'lastSalePrice',
-      'lastSalePricePaymentToken',
-      'lastSalePriceInUSD',
-      'saleEndsAt',
-      'createdAt',
-      'listedAt',
-      'soldAt',
-      'viewed',
-      'owner',
+      "contractAddress",
+      "contentType",
+      "tokenID",
+      "tokenURI",
+      "tokenType",
+      "thumbnailPath",
+      "name",
+      "imageURL",
+      "supply",
+      "price",
+      "paymentToken",
+      "priceInUSD",
+      "liked",
+      "isAppropriate",
+      "saleEndsAt",
+      "createdAt",
+      "lastSalePricePaymentToken",
+      "lastSalePriceInUSD",
+      "lastSalePrice",
+      "lastSalePricePaymentToken",
+      "lastSalePriceInUSD",
+      "saleEndsAt",
+      "createdAt",
+      "listedAt",
+      "soldAt",
+      "viewed",
+      "owner",
     ];
 
     const getCategoryCollectionAddresses = async (category) => {
       const categoryCollectionRows = await Collection.find({
-        categories: category
-      }).select('erc721Address');
+        categories: category,
+      }).select("erc721Address");
       const categoryCollectionAddresses = categoryCollectionRows.map((row) =>
         row.erc721Address.toLowerCase()
       );
@@ -251,7 +251,7 @@ const selectTokens = async (req, res) => {
           row.minterAddress.toLowerCase()
         );
       const allExploreCollectionRows = await Collection.find({
-        erc721Address: { $nin: disabledExploreCollectionAddresses }
+        erc721Address: { $nin: disabledExploreCollectionAddresses },
       });
 
       allExceptDisabledCollections = allExploreCollectionRows.map((row) =>
@@ -264,10 +264,10 @@ const selectTokens = async (req, res) => {
     const lookupNFTItemsAndMerge = [
       {
         $lookup: {
-          from: 'nftitems',
+          from: "nftitems",
           let: {
-            id: '$tokenID',
-            contract: '$minter'
+            id: "$tokenID",
+            contract: "$minter",
           },
           pipeline: [
             {
@@ -275,33 +275,33 @@ const selectTokens = async (req, res) => {
                 $expr: {
                   $and: [
                     {
-                      $eq: ['$tokenID', '$$id']
+                      $eq: ["$tokenID", "$$id"],
                     },
                     {
-                      $eq: ['$contractAddress', '$$contract']
-                    }
-                  ]
-                }
-              }
-            }
+                      $eq: ["$contractAddress", "$$contract"],
+                    },
+                  ],
+                },
+              },
+            },
           ],
-          as: 'result'
-        }
+          as: "result",
+        },
       },
       {
         $replaceRoot: {
           newRoot: {
             $mergeObjects: [
               {
-                $arrayElemAt: ['$result', 0]
+                $arrayElemAt: ["$result", 0],
               },
               {
-                listing: '$$ROOT._id'
-              }
-            ]
-          }
-        }
-      }
+                listing: "$$ROOT._id",
+              },
+            ],
+          },
+        },
+      },
     ];
 
     /*
@@ -318,7 +318,7 @@ const selectTokens = async (req, res) => {
             ? {}
             : { contractAddress: { $in: [...collections2filter] } }),
           thumbnailPath: { $ne: nonImage },
-          isAppropriate: true
+          isAppropriate: true,
         };
 
         return NFTITEM.find(collectionFilters).select(selectOption).lean();
@@ -326,25 +326,25 @@ const selectTokens = async (req, res) => {
 
       if (filters) {
         const minterFilters = {
-          $match: { $expr: { $in: ['$minter', collections2filter] } }
+          $match: { $expr: { $in: ["$minter", collections2filter] } },
         };
-        if (filters.includes('hasBids')) {
+        if (filters.includes("hasBids")) {
           const activeBidFilter = {
             $match: {
               $expr: {
                 $and: [
                   {
-                    $eq: ['$winningBid', true]
+                    $eq: ["$winningBid", true],
                   },
                   {
-                    $eq: ['$auctionActive', true]
+                    $eq: ["$auctionActive", true],
                   },
                   collections2filter === null
                     ? undefined
-                    : { $in: ['$minter', collections2filter] }
-                ].filter((action) => action !== undefined)
-              }
-            }
+                    : { $in: ["$minter", collections2filter] },
+                ].filter((action) => action !== undefined),
+              },
+            },
           };
           /* for buy now - pick from Bid */
           const pipeline = [activeBidFilter, ...lookupNFTItemsAndMerge].filter(
@@ -352,24 +352,24 @@ const selectTokens = async (req, res) => {
           );
           return Bid.aggregate(pipeline);
         }
-        if (filters.includes('buyNow')) {
+        if (filters.includes("buyNow")) {
           const pipeline = [
             collections2filter === null ? undefined : minterFilters,
-            ...lookupNFTItemsAndMerge
+            ...lookupNFTItemsAndMerge,
           ].filter((part) => part !== undefined);
           return Listing.aggregate(pipeline);
         }
-        if (filters.includes('hasOffers')) {
+        if (filters.includes("hasOffers")) {
           const pipeline = [
             collections2filter === null ? undefined : minterFilters,
-            ...lookupNFTItemsAndMerge
+            ...lookupNFTItemsAndMerge,
           ].filter((part) => part !== undefined);
           return Offer.aggregate(pipeline);
         }
-        if (filters.includes('onAuction')) {
+        if (filters.includes("onAuction")) {
           const pipeline = [
             collections2filter === null ? undefined : minterFilters,
-            ...lookupNFTItemsAndMerge
+            ...lookupNFTItemsAndMerge,
           ].filter((part) => part !== undefined);
           return Auction.aggregate(pipeline);
         }
@@ -406,7 +406,7 @@ const selectTokens = async (req, res) => {
             : { contractAddress: { $in: [...collections2filter] } }),
           ...(wallet ? { owner: wallet } : {}),
           thumbnailPath: { $ne: nonImage },
-          isAppropriate: true
+          isAppropriate: true,
         };
         return NFTITEM.find(collectionFilters721).select(selectOption).lean();
 
@@ -467,58 +467,58 @@ const selectTokens = async (req, res) => {
             $expr: {
               $and: [
                 {
-                  $eq: [`$${accountColumnName}`, wallet]
+                  $eq: [`$${accountColumnName}`, wallet],
                 },
                 collections2filter === null
                   ? undefined
-                  : { $in: ['$minter', collections2filter] }
-              ].filter((action) => action !== undefined)
-            }
-          }
+                  : { $in: ["$minter", collections2filter] },
+              ].filter((action) => action !== undefined),
+            },
+          },
         });
-        if (filters.includes('hasBids')) {
+        if (filters.includes("hasBids")) {
           /* for has bids - pick from Bid */
           const activeBidAccountFilter = {
             $match: {
               $expr: {
                 $and: [
                   {
-                    $eq: ['$winningBid', true]
+                    $eq: ["$winningBid", true],
                   },
                   {
-                    $eq: ['$auctionActive', true]
+                    $eq: ["$auctionActive", true],
                   },
                   collections2filter === null
                     ? undefined
-                    : { $in: ['$minter', collections2filter] },
-                  { $eq: ['$bidder', wallet] }
-                ].filter((action) => action !== undefined)
-              }
-            }
+                    : { $in: ["$minter", collections2filter] },
+                  { $eq: ["$bidder", wallet] },
+                ].filter((action) => action !== undefined),
+              },
+            },
           };
 
           const pipeline = [activeBidAccountFilter, ...lookupNFTItemsAndMerge];
           return Bid.aggregate(pipeline);
         }
 
-        if (filters.includes('buyNow')) {
+        if (filters.includes("buyNow")) {
           const pipeline = [
-            accountAndMintFilter('owner'),
-            ...lookupNFTItemsAndMerge
+            accountAndMintFilter("owner"),
+            ...lookupNFTItemsAndMerge,
           ];
           return Listing.aggregate(pipeline);
         }
-        if (filters.includes('hasOffers')) {
+        if (filters.includes("hasOffers")) {
           const pipeline = [
-            accountAndMintFilter('creator'),
-            ...lookupNFTItemsAndMerge
+            accountAndMintFilter("creator"),
+            ...lookupNFTItemsAndMerge,
           ];
           return Offer.aggregate(pipeline);
         }
-        if (filters.includes('onAuction')) {
+        if (filters.includes("onAuction")) {
           const pipeline = [
-            accountAndMintFilter('bidder'),
-            ...lookupNFTItemsAndMerge
+            accountAndMintFilter("bidder"),
+            ...lookupNFTItemsAndMerge,
           ];
           return Auction.aggregate(pipeline);
         }
@@ -534,12 +534,12 @@ const getBundleItemDetails = async (bundleItem) => {
   try {
     let nftItem = await NFTITEM.findOne({
       contractAddress: bundleItem.contractAddress,
-      tokenID: bundleItem.tokenID
+      tokenID: bundleItem.tokenID,
     });
     if (nftItem)
       return {
         imageURL: nftItem.imageURL,
-        thumbnailPath: nftItem.thumbnailPath
+        thumbnailPath: nftItem.thumbnailPath,
       };
     else return {};
   } catch (error) {
@@ -554,7 +554,7 @@ const entailBundleInfoItems = async (bundleInfoItems) => {
     let detail = await getBundleItemDetails(bundleInfoItem);
     details.push({
       ...bundleInfoItem._doc,
-      ...detail
+      ...detail,
     });
   });
   await Promise.all(promise);
@@ -580,8 +580,8 @@ const selectBundles = async (req, res) => {
 
     if (category != undefined) {
       categoryCollections = await Collection.find({
-        categories: category
-      }).select('erc721Address');
+        categories: category,
+      }).select("erc721Address");
       categoryCollections = categoryCollections.map((c) =>
         toLowerCase(c.erc721Address)
       );
@@ -608,7 +608,7 @@ const selectBundles = async (req, res) => {
       let collectionFilters = {
         ...(collections2filter != null
           ? { contractAddress: { $in: [...collections2filter] } }
-          : {})
+          : {}),
       };
 
       let bundleInfos = await BundleInfo.find(collectionFilters);
@@ -622,8 +622,8 @@ const selectBundles = async (req, res) => {
       });
 
       let bundleFilter = {
-        ...(wallet != null ? { owner: { $regex: wallet, $options: 'i' } } : {}),
-        ...{ _id: { $in: bundleIDs } }
+        ...(wallet != null ? { owner: { $regex: wallet, $options: "i" } } : {}),
+        ...{ _id: { $in: bundleIDs } },
       };
 
       let bundles = await Bundle.find(bundleFilter);
@@ -648,11 +648,11 @@ const selectBundles = async (req, res) => {
           listedAt: bundle._doc.listedAt,
           soldAt: bundle._doc.soldAt,
           createdAt: bundle._doc.createdAt,
-          items: bundleItems
+          items: bundleItems,
         });
       });
       return data;
-    } else if (filters.includes('buyNow') || filters.includes('onAuction')) {
+    } else if (filters.includes("buyNow") || filters.includes("onAuction")) {
       /*
         when no status option
          */
@@ -660,20 +660,20 @@ const selectBundles = async (req, res) => {
       let collectionFilters = {
         ...(collections2filter != null
           ? { contractAddress: { $in: [...collections2filter] } }
-          : {})
+          : {}),
       };
 
       let data = [];
       let filterBundleIDs = [];
-      if (filters.includes('buyNow')) {
-        let listedBundles = await BundleListing.find().select(['bundleID']);
+      if (filters.includes("buyNow")) {
+        let listedBundles = await BundleListing.find().select(["bundleID"]);
         let listedBundleIDs = listedBundles.map(
           (listedBundle) => listedBundle.bundleID
         );
         filterBundleIDs = [...filterBundleIDs, ...listedBundleIDs];
       }
-      if (filters.includes('hasOffers')) {
-        let offerBundles = await BundleOffer.find().select(['bundleID']);
+      if (filters.includes("hasOffers")) {
+        let offerBundles = await BundleOffer.find().select(["bundleID"]);
         let offerBundleIDs = offerBundles.map(
           (offerBundle) => offerBundle.bundleID
         );
@@ -689,8 +689,8 @@ const selectBundles = async (req, res) => {
         }
       });
       let bundleFilter = {
-        ...(wallet != null ? { owner: { $regex: wallet, $options: 'i' } } : {}),
-        ...{ _id: { $in: bundleIDs } }
+        ...(wallet != null ? { owner: { $regex: wallet, $options: "i" } } : {}),
+        ...{ _id: { $in: bundleIDs } },
       };
       let bundles = await Bundle.find(bundleFilter);
       bundles.map((bundle) => {
@@ -711,7 +711,7 @@ const selectBundles = async (req, res) => {
           listedAt: bundle._doc.listedAt,
           soldAt: bundle._doc.soldAt,
           createdAt: bundle._doc.createdAt,
-          items: bundleItems
+          items: bundleItems,
         });
       });
       return data;
@@ -723,7 +723,7 @@ const selectBundles = async (req, res) => {
       let collectionFilters = {
         ...(collections2filter != null
           ? { contractAddress: { $in: [...collections2filter] } }
-          : {})
+          : {}),
       };
       let bundleInfos = await BundleInfo.find(collectionFilters);
       bundleInfos = await entailBundleInfoItems(bundleInfos);
@@ -734,8 +734,8 @@ const selectBundles = async (req, res) => {
         }
       });
       let bundleFilter = {
-        ...(wallet != null ? { owner: { $regex: wallet, $options: 'i' } } : {}),
-        ...{ _id: { $in: bundleIDs } }
+        ...(wallet != null ? { owner: { $regex: wallet, $options: "i" } } : {}),
+        ...{ _id: { $in: bundleIDs } },
       };
       let bundles = await Bundle.find(bundleFilter);
       let data = [];
@@ -751,7 +751,7 @@ const selectBundles = async (req, res) => {
           thumbnailPath: bi.thumbnailPath,
           tokenID: bi.tokenID,
           tokenType: bi.tokenType,
-          tokenURI: bi.tokenURI
+          tokenURI: bi.tokenURI,
         }));
         data.push({
           viewed: bundle._doc.viewed,
@@ -767,7 +767,7 @@ const selectBundles = async (req, res) => {
           listedAt: bundle._doc.listedAt,
           soldAt: bundle._doc.soldAt,
           createdAt: bundle._doc.createdAt,
-          items: bundleItems
+          items: bundleItems,
         });
       });
       return data;
@@ -778,19 +778,19 @@ const selectBundles = async (req, res) => {
   }
 };
 
-router.post('/fetchTokens', async (req, res) => {
+router.post("/fetchTokens", async (req, res) => {
   let type = req.body.type; // type - item type
   let sortby = req.body.sortby; //sort -> string param
   let from = parseInt(req.body.from);
   let count = parseInt(req.body.count);
   let items = [];
-  if (type === 'all') {
+  if (type === "all") {
     let nfts = await selectTokens(req, res);
     let bundles = await selectBundles(req, res);
     items = [...nfts, ...bundles];
-  } else if (type === 'single') {
+  } else if (type === "single") {
     items = await selectTokens(req, res);
-  } else if (type === 'bundle') {
+  } else if (type === "bundle") {
     items = await selectBundles(req, res);
   }
 
@@ -799,77 +799,78 @@ router.post('/fetchTokens', async (req, res) => {
   let data = sortItems(updatedItems, sortby);
 
   let _searchResults = data.slice(from, from + count);
-  const accounts = await Account.find().select(['address','alias']).lean();
-  const addresses = accounts.map((account)=>account.address);
-  let searchResults = _searchResults.map((sr) => { 
+  const accounts = await Account.find().select(["address", "alias"]).lean();
+  const addresses = accounts.map((account) => account.address);
+  let searchResults = _searchResults.map((sr) => {
     return {
-    ...(sr.contentType != null && sr.contentType != undefined
-      ? { contentType: sr.contentType }
-      : {}),
-    ...(sr.contractAddress != null && sr.contractAddress != undefined
-      ? { contractAddress: sr.contractAddress }
-      : {}),
-    ...(sr.imageURL != null && sr.imageURL != undefined
-      ? { imageURL: sr.imageURL }
-      : {}),
-    ...(sr.name != null && sr.name != undefined ? { name: sr.name } : {}),
-    ...(sr.price != null && sr.price != undefined ? { price: sr.price } : {}),
-    ...(sr.paymentToken != null && sr.paymentToken != undefined
-      ? { paymentToken: sr.paymentToken }
-      : {}),
-    ...(sr.priceInUSD != null && sr.priceInUSD != undefined
-      ? { priceInUSD: sr.priceInUSD }
-      : {}),
-    ...(sr.supply != null && sr.supply != undefined
-      ? { supply: sr.supply }
-      : {}),
-    ...(sr.thumbnailPath != null && sr.thumbnailPath != undefined
-      ? { thumbnailPath: sr.thumbnailPath }
-      : {}),
-    ...(sr.tokenID != null && sr.tokenID != undefined
-      ? { tokenID: sr.tokenID }
-      : {}),
-    ...(sr.tokenType != null && sr.tokenType != undefined
-      ? { tokenType: sr.tokenType }
-      : {}),
-    ...(sr.tokenURI != null && sr.tokenURI != undefined
-      ? { tokenURI: sr.tokenURI }
-      : {}),
-    ...(sr.items != null && sr.items != undefined ? { items: sr.items } : {}),
-    ...(sr.liked != null && sr.liked != undefined ? { liked: sr.liked } : {}),
-    ...(sr._id != null && sr._id != undefined ? { _id: sr._id } : {}),
-    ...(sr.holderSupply != null && sr.holderSupply != undefined
-      ? { holderSupply: sr.holderSupply }
-      : {}),
-    ...(sr.saleEndsAt != null && sr.saleEndsAt != undefined
-      ? { saleEndsAt: sr.saleEndsAt }
-      : {}),
-    ...(sr.lastSalePrice != null && sr.lastSalePrice != undefined
-      ? { lastSalePrice: sr.lastSalePrice }
-      : {}),
-    ...(sr.lastSalePricePaymentToken != null &&
-    sr.lastSalePricePaymentToken != undefined
-      ? { lastSalePricePaymentToken: sr.lastSalePricePaymentToken }
-      : {}),
-    ...(sr.lastSalePriceInUSD != null && sr.lastSalePriceInUSD != undefined
-      ? { lastSalePriceInUSD: sr.lastSalePriceInUSD }
-      : {}),
-    ...(sr.isAppropriate != null && sr.isAppropriate != undefined
-      ? { isAppropriate: sr.isAppropriate }
-      : { isAppropriate: false }),
-    ...(sr.owner != null && sr.owner != undefined
-      ? { owner: sr.owner }
-      : { owner: false }),
-    ...(addresses.includes(sr.owner)
-      ? { alias: accounts[addresses.indexOf(sr.owner)].alias }
-      : { alias: sr.owner })
-  }});
+      ...(sr.contentType != null && sr.contentType != undefined
+        ? { contentType: sr.contentType }
+        : {}),
+      ...(sr.contractAddress != null && sr.contractAddress != undefined
+        ? { contractAddress: sr.contractAddress }
+        : {}),
+      ...(sr.imageURL != null && sr.imageURL != undefined
+        ? { imageURL: sr.imageURL }
+        : {}),
+      ...(sr.name != null && sr.name != undefined ? { name: sr.name } : {}),
+      ...(sr.price != null && sr.price != undefined ? { price: sr.price } : {}),
+      ...(sr.paymentToken != null && sr.paymentToken != undefined
+        ? { paymentToken: sr.paymentToken }
+        : {}),
+      ...(sr.priceInUSD != null && sr.priceInUSD != undefined
+        ? { priceInUSD: sr.priceInUSD }
+        : {}),
+      ...(sr.supply != null && sr.supply != undefined
+        ? { supply: sr.supply }
+        : {}),
+      ...(sr.thumbnailPath != null && sr.thumbnailPath != undefined
+        ? { thumbnailPath: sr.thumbnailPath }
+        : {}),
+      ...(sr.tokenID != null && sr.tokenID != undefined
+        ? { tokenID: sr.tokenID }
+        : {}),
+      ...(sr.tokenType != null && sr.tokenType != undefined
+        ? { tokenType: sr.tokenType }
+        : {}),
+      ...(sr.tokenURI != null && sr.tokenURI != undefined
+        ? { tokenURI: sr.tokenURI }
+        : {}),
+      ...(sr.items != null && sr.items != undefined ? { items: sr.items } : {}),
+      ...(sr.liked != null && sr.liked != undefined ? { liked: sr.liked } : {}),
+      ...(sr._id != null && sr._id != undefined ? { _id: sr._id } : {}),
+      ...(sr.holderSupply != null && sr.holderSupply != undefined
+        ? { holderSupply: sr.holderSupply }
+        : {}),
+      ...(sr.saleEndsAt != null && sr.saleEndsAt != undefined
+        ? { saleEndsAt: sr.saleEndsAt }
+        : {}),
+      ...(sr.lastSalePrice != null && sr.lastSalePrice != undefined
+        ? { lastSalePrice: sr.lastSalePrice }
+        : {}),
+      ...(sr.lastSalePricePaymentToken != null &&
+      sr.lastSalePricePaymentToken != undefined
+        ? { lastSalePricePaymentToken: sr.lastSalePricePaymentToken }
+        : {}),
+      ...(sr.lastSalePriceInUSD != null && sr.lastSalePriceInUSD != undefined
+        ? { lastSalePriceInUSD: sr.lastSalePriceInUSD }
+        : {}),
+      ...(sr.isAppropriate != null && sr.isAppropriate != undefined
+        ? { isAppropriate: sr.isAppropriate }
+        : { isAppropriate: false }),
+      ...(sr.owner != null && sr.owner != undefined
+        ? { owner: sr.owner }
+        : { owner: false }),
+      ...(addresses.includes(sr.owner)
+        ? { alias: accounts[addresses.indexOf(sr.owner)].alias }
+        : { alias: false }),
+    };
+  });
   return res.json({
-    status: 'success',
+    status: "success",
     data: {
       tokens: searchResults,
-      total: data.length
-    }
+      total: data.length,
+    },
   });
 });
 
@@ -878,50 +879,50 @@ const parseAddress = (data) => {
   return data.substring(0, 2) + data.substring(length - 40);
 };
 
-router.post('/transfer721History', async (req, res) => {
+router.post("/transfer721History", async (req, res) => {
   try {
     let tokenID = parseInt(req.body.tokenID);
     let address = toLowerCase(req.body.address);
     let history = await fetchTransferHistory721(address, tokenID);
     return res.json({
-      status: 'success',
-      data: history
+      status: "success",
+      data: history,
     });
   } catch (error) {
     Logger.error(error);
     return res.json({
-      status: 'failed'
+      status: "failed",
     });
   }
 });
 
-router.post('/transfer1155History', async (req, res) => {
+router.post("/transfer1155History", async (req, res) => {
   try {
     let tokenID = parseInt(req.body.tokenID);
     let address = toLowerCase(req.body.address);
     let history = await fetchTransferHistory1155(address, tokenID);
     return res.json({
-      status: 'success',
-      data: history
+      status: "success",
+      data: history,
     });
   } catch (error) {
     Logger.error(error);
     return res.json({
-      status: 'failed'
+      status: "failed",
     });
   }
 });
 
-router.get('/getAllnfts', async (req, res) => {
-  try{
+router.get("/getAllnfts", async (req, res) => {
+  try {
     const nfts = await NFTITEM.find();
-    return res.status(200).json({status: "success", data: nfts});
-  }catch (error) {
-    return res.status(400).json({status: "failed"});
+    return res.status(200).json({ status: "success", data: nfts });
+  } catch (error) {
+    return res.status(400).json({ status: "failed" });
   }
-})
+});
 
-router.post('/getSingleItemDetails', async (req, res) => {
+router.post("/getSingleItemDetails", async (req, res) => {
   try {
     let contractAddress = toLowerCase(req.body.contractAddress);
     let tokenID = parseInt(req.body.tokenID);
@@ -931,23 +932,23 @@ router.post('/getSingleItemDetails', async (req, res) => {
     let nft = await NFTITEM.findOne({
       contractAddress: contractAddress,
       tokenID: tokenID,
-      isAppropriate: true
+      isAppropriate: true,
     });
     if (!nft)
       return res.json({
-        status: 'failed'
+        status: "failed",
       });
     // content type
     let contentType = nft.contentType;
     // likes count
     let likes = nft ? nft.liked : 0;
     // token uri
-    let uri = nft ? nft.tokenURI : '';
+    let uri = nft ? nft.tokenURI : "";
     // get listings
     let listings = [];
     let _listings = await Listing.find({
       minter: contractAddress,
-      tokenID: tokenID
+      tokenID: tokenID,
     });
     let listingPromise = _listings.map(async (list) => {
       let account = await getAccountInfo(list.owner);
@@ -961,18 +962,18 @@ router.post('/getSingleItemDetails', async (req, res) => {
         priceInUSD: list.priceInUSD,
         paymentToken: list.paymentToken,
         alias: account ? account[0] : null,
-        image: account ? account[1] : null
+        image: account ? account[1] : null,
       });
     });
     await Promise.all(listingPromise);
-    listings = orderBy(listings, 'price', 'asc');
+    listings = orderBy(listings, "price", "asc");
 
     // get offers
     let offers = [];
 
     let _offers = await Offer.find({
-      minter: { $regex: new RegExp(contractAddress, 'i') },
-      tokenID: tokenID
+      minter: { $regex: new RegExp(contractAddress, "i") },
+      tokenID: tokenID,
     });
     let offerPromise = _offers.map(async (offer) => {
       let account = await getAccountInfo(offer.creator);
@@ -986,27 +987,27 @@ router.post('/getSingleItemDetails', async (req, res) => {
         priceInUSD: offer.priceInUSD,
         deadline: offer.deadline,
         alias: account ? account[0] : null,
-        image: account ? account[1] : null
+        image: account ? account[1] : null,
       });
     });
     await Promise.all(offerPromise);
     // get trade history
     let _history = await TradeHistory.find({
-      collectionAddress: { $regex: new RegExp(contractAddress, 'i') },
-      tokenID: tokenID
+      collectionAddress: { $regex: new RegExp(contractAddress, "i") },
+      tokenID: tokenID,
     })
       .select([
-        'from',
-        'to',
-        'tokenID',
-        'price',
-        'paymentToken',
-        'priceInUSD',
-        'value',
-        'createdAt',
-        'isAuction'
+        "from",
+        "to",
+        "tokenID",
+        "price",
+        "paymentToken",
+        "priceInUSD",
+        "value",
+        "createdAt",
+        "isAuction",
       ])
-      .sort({ createdAt: 'desc' });
+      .sort({ createdAt: "desc" });
     let history = [];
 
     let historyPromise = _history.map(async (hist) => {
@@ -1028,7 +1029,7 @@ router.post('/getSingleItemDetails', async (req, res) => {
         fromAlias: sender ? sender[0] : null,
         fromImage: sender ? sender[1] : null,
         toAlias: receiver ? receiver[0] : null,
-        toImage: receiver ? receiver[1] : null
+        toImage: receiver ? receiver[1] : null,
       });
     });
     await Promise.all(historyPromise);
@@ -1036,36 +1037,36 @@ router.post('/getSingleItemDetails', async (req, res) => {
     let nfts = await NFTITEM.find({
       contractAddress: contractAddress,
       tokenID: { $ne: tokenID },
-      isAppropriate: true
+      isAppropriate: true,
     })
-      .sort({ viewed: 'desc' })
+      .sort({ viewed: "desc" })
       .limit(10)
       .select([
-        'thumbnailPath',
-        'supply',
-        'price',
-        'paymentToken',
-        'priceInUSD',
-        'tokenType',
-        'tokenID',
-        'tokenURI',
-        'name',
-        'imageURL',
-        'liked',
-        'contractAddress',
-        'isAppropriate',
-        'lastSalePrice',
-        'lastSalePricePaymentToken',
-        'lastSalePriceInUSD',
-        'saleEndsAt'
+        "thumbnailPath",
+        "supply",
+        "price",
+        "paymentToken",
+        "priceInUSD",
+        "tokenType",
+        "tokenID",
+        "tokenURI",
+        "name",
+        "imageURL",
+        "liked",
+        "contractAddress",
+        "isAppropriate",
+        "lastSalePrice",
+        "lastSalePricePaymentToken",
+        "lastSalePriceInUSD",
+        "saleEndsAt",
       ]);
     let hasUnlockable = await UnlockableContents.findOne({
       contractAddress: contractAddress,
-      tokenID: tokenID
+      tokenID: tokenID,
     });
     hasUnlockable = hasUnlockable ? true : false;
     return res.json({
-      status: 'success',
+      status: "success",
       data: {
         tokenType,
         likes,
@@ -1075,13 +1076,13 @@ router.post('/getSingleItemDetails', async (req, res) => {
         history,
         nfts,
         contentType,
-        hasUnlockable
-      }
+        hasUnlockable,
+      },
     });
   } catch (error) {
     Logger.error(error);
     return res.json({
-      status: 'failed'
+      status: "failed",
     });
   }
 });
@@ -1112,11 +1113,11 @@ const fetchTransferHistory721 = async (address, tokenID) => {
     address: address,
     fromBlock: 0,
     topics: [
-      ethers.utils.id('Transfer(address,address,uint256)'),
+      ethers.utils.id("Transfer(address,address,uint256)"),
       null,
       null,
-      ethers.utils.hexZeroPad(tokenID, 32)
-    ]
+      ethers.utils.hexZeroPad(tokenID, 32),
+    ],
   });
 
   let history = [];
@@ -1134,7 +1135,7 @@ const fetchTransferHistory721 = async (address, tokenID) => {
       fromAlias: sender ? sender[0] : null,
       fromImage: sender ? sender[1] : null,
       toAlias: receiver ? receiver[0] : null,
-      toImage: receiver ? receiver[1] : null
+      toImage: receiver ? receiver[1] : null,
     });
   });
   await Promise.all(promise);
@@ -1143,7 +1144,7 @@ const fetchTransferHistory721 = async (address, tokenID) => {
 const parseSingleTrasferData = (data) => {
   return [
     parseInt(data.substring(0, 66), 16),
-    parseInt(data.substring(66), 16)
+    parseInt(data.substring(66), 16),
   ];
 };
 
@@ -1153,28 +1154,28 @@ const fetchTransferHistory1155 = async (address, id) => {
     fromBlock: 0,
     topics: [
       ethers.utils.id(
-        'TransferSingle(address,address,address,uint256,uint256)'
+        "TransferSingle(address,address,address,uint256,uint256)"
       ),
       null,
       null,
       null,
       null,
-      null
-    ]
+      null,
+    ],
   });
   let batchTransferEvts = await provider.getLogs({
     address: address,
     fromBlock: 0,
     topics: [
       ethers.utils.id(
-        'TransferBatch(address,address,address,uint256[],uint256[])'
+        "TransferBatch(address,address,address,uint256[],uint256[])"
       ),
       null,
       null,
       null,
       null,
-      null
-    ]
+      null,
+    ],
   });
 
   let history = [];
@@ -1202,7 +1203,7 @@ const fetchTransferHistory1155 = async (address, id) => {
         fromAlias: sender ? sender[0] : null,
         fromImage: sender ? sender[1] : null,
         toAlias: receiver ? receiver[0] : null,
-        toImage: receiver ? receiver[1] : null
+        toImage: receiver ? receiver[1] : null,
       });
     }
   });
@@ -1230,7 +1231,7 @@ const fetchTransferHistory1155 = async (address, id) => {
             fromAlias: sender ? sender[0] : null,
             fromImage: sender ? sender[1] : null,
             toAlias: receiver ? receiver[0] : null,
-            toImage: receiver ? receiver[1] : null
+            toImage: receiver ? receiver[1] : null,
           });
         }
       });
@@ -1239,7 +1240,7 @@ const fetchTransferHistory1155 = async (address, id) => {
   });
   await Promise.all(batchPromise);
   // process batch transfer event logs
-  let _history = orderBy(history, 'blockTime', 'asc');
+  let _history = orderBy(history, "blockTime", "asc");
   return _history;
 };
 
