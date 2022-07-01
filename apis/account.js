@@ -118,6 +118,7 @@ router.post("/accountdetails", auth, async (req, res) => {
     let account = await Account.findOne({ address: address });
     if (imgData) {
       if (imgData.startsWith("https")) {
+        console.log("imgData1");
         if (account) {
           account.alias = alias;
           account.email = email;
@@ -134,6 +135,7 @@ router.post("/accountdetails", auth, async (req, res) => {
           });
         }
       } else {
+        console.log("imgData2");
         let ipfsHash = await pinAccountAvatar(
           account,
           imgData,
@@ -147,6 +149,7 @@ router.post("/accountdetails", auth, async (req, res) => {
           account.bio = bio;
           account.imageHash = ipfsHash;
           let _account = await account.save();
+          console.log("ipfshassh", ipfsHash, account);
           return res.json({
             status: "success",
             data: _account.toAccountJSON(),

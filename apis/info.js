@@ -83,7 +83,7 @@ router.get("/getCollections", async (_, res) => {
       isVisible: true,
       isInternal: collection.isInternal,
       isOwnerble: collection.isOwnerble,
-      owner: collection.owner
+      owner: collection.owner,
     });
   });
 
@@ -223,6 +223,165 @@ router.get("/get1155info/:address/:tokenID", async (req, res) => {
 });
 
 router.get("/getActivityInfo", async (req, res) => {
+  let bids = [];
+  let offers = [];
+  let listings = [];
+  let sold = [];
+  let follow = [];
+  let likes = [];
+
+  let allBids = await Bid.find({});
+  let allOffers = await Offer.find({});
+  let allLists = await Listing.find({});
+  let allSales = await TradeHistory.find({});
+  let allFollows = await Follows.find({});
+  let allLikes = await Likes.find({});
+
+  if (allBids) {
+    let bidsPromise = allBids.map(async (bfa) => {
+      let token = await NFTITEM.findOne({
+        contractAddress: bfa.minter,
+        tokenID: bfa.tokenID,
+      });
+      if (token) {
+        let account = await getAccountInfo(token.owner);
+        bids.push({
+          event: "Bid",
+          name: token.name,
+          imageURL: token.imageURL,
+          price: bfa.bid,
+          paymentToken: bfa.paymentToken,
+          createdAt: bfa._id.getTimestamp(),
+          alias: account ? account[0] : account[2],
+          operator: token.owner,
+        });
+      }
+    });
+
+    await Promise.all(bidsPromise);
+  }
+  if (allOffers) {
+    let offersPromise = allOffers.map(async (ofa) => {
+      let token = await NFTITEM.findOne({
+        contractAddress: ofa.minter,
+        tokenID: ofa.tokenID,
+      });
+      if (token) {
+        let account = await getAccountInfo(token.owner);
+        offers.push({
+          event: "Offer",
+          name: token.name,
+          imageURL: token.imageURL,
+          price: ofa.pricePerItem,
+          paymentToken: ofa.paymentToken,
+          createdAt: ofa._id.getTimestamp(),
+          alias: account ? account[0] : null,
+          operator: token.owner,
+        });
+      }
+    });
+    await Promise.all(offersPromise);
+  }
+  if (allLists) {
+    let listsPromise = allLists.map(async (lfa) => {
+      let token = await NFTITEM.findOne({
+        contractAddress: lfa.minter,
+        tokenID: lfa.tokenID,
+      });
+      if (token) {
+        let account = await getAccountInfo(token.owner);
+        listings.push({
+          event: "Listing",
+          name: token.name,
+          imageURL: token.imageURL,
+          price: lfa.price,
+          paymentToken: lfa.paymentToken,
+          createdAt: lfa._id.getTimestamp(),
+          alias: account ? account[0] : null,
+          operator: token.owner,
+        });
+      }
+    });
+    await Promise.all(listsPromise);
+  }
+
+  if (allSales) {
+    let soldPromise = allSales.map(async (sfa) => {
+      let token = await NFTITEM.findOne({
+        contractAddress: sfa.collectionAddress,
+        tokenID: sfa.tokenID,
+      });
+
+      if (token) {
+        let account = await getAccountInfo(sfa.to);
+        sold.push({
+          event: "Sold",
+          name: token.name,
+          imageURL: token.imageURL,
+          price: sfa.price,
+          paymentToken: sfa.paymentToken,
+          createdAt: sfa._id.getTimestamp(),
+          alias: account ? account[0] : null,
+          operator: token.owner,
+        });
+      }
+    });
+    await Promise.all(soldPromise);
+  }
+
+  if (allFollows) {
+    let followPromise = allFollows.map(async (fow) => {
+      let toAccount = await getAccountInfo(fow.to);
+      let fromAccount = await getAccountInfo(fow.from);
+      follow.push({
+        event: "Followed",
+        name: toAccount && toAccount[0] ? toAccount[0] : fow.to,
+        imageURL: toAccount ? toAccount[1] : null,
+        createdAt: fow._id.getTimestamp(),
+        alias: fromAccount ? fromAccount[0] : null,
+        operator: fow.from,
+      });
+    });
+    await Promise.all(followPromise);
+  }
+
+  if (allLikes) {
+    let likePromise = allLikes.map(async (lik) => {
+      let token = await NFTITEM.findOne({
+        contractAddress: lik.contractAddress,
+        tokenID: lik.tokenID,
+      });
+
+      if (token) {
+        let account = await getAccountInfo(lik.follower);
+        likes.push({
+          event: "Like",
+          name: token.name,
+          imageURL: token.imageURL,
+          createdAt: lik._id.getTimestamp(),
+          alias: account ? account[0] : null,
+          operator: lik.follower,
+        });
+      }
+    });
+    await Promise.all(likePromise);
+  }
+
+  return res.json({
+    status: "success",
+    data: {
+      bids,
+      offers,
+      listings,
+      sold,
+      follow,
+      likes,
+    },
+  });
+});
+
+router.get("/getNftActivity/:address", async (req, res) => {
+  const { address } = req.params;
   let bids = [];
   let offers = [];
   let listings = [];
