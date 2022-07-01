@@ -215,7 +215,8 @@ const selectTokens = async (req, res) => {
       'createdAt',
       'listedAt',
       'soldAt',
-      'viewed'
+      'viewed',
+      'owner',
     ];
 
     const getCategoryCollectionAddresses = async (category) => {
@@ -782,7 +783,6 @@ router.post('/fetchTokens', async (req, res) => {
   let sortby = req.body.sortby; //sort -> string param
   let from = parseInt(req.body.from);
   let count = parseInt(req.body.count);
-
   let items = [];
   if (type === 'all') {
     let nfts = await selectTokens(req, res);
@@ -799,8 +799,10 @@ router.post('/fetchTokens', async (req, res) => {
   let data = sortItems(updatedItems, sortby);
 
   let _searchResults = data.slice(from, from + count);
-
-  let searchResults = _searchResults.map((sr) => ({
+  const accounts = await Account.find().select(['address','alias']).lean();
+  const addresses = accounts.map((account)=>account.address);
+  let searchResults = _searchResults.map((sr) => { 
+    return {
     ...(sr.contentType != null && sr.contentType != undefined
       ? { contentType: sr.contentType }
       : {}),
@@ -854,9 +856,14 @@ router.post('/fetchTokens', async (req, res) => {
       : {}),
     ...(sr.isAppropriate != null && sr.isAppropriate != undefined
       ? { isAppropriate: sr.isAppropriate }
-      : { isAppropriate: false })
-  }));
-
+      : { isAppropriate: false }),
+    ...(sr.owner != null && sr.owner != undefined
+      ? { owner: sr.owner }
+      : { owner: false }),
+    ...(addresses.includes(sr.owner)
+      ? { alias: accounts[addresses.indexOf(sr.owner)].alias }
+      : { alias: sr.owner })
+  }});
   return res.json({
     status: 'success',
     data: {
