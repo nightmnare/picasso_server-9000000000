@@ -68,23 +68,23 @@ router.post("/collectiondetails", auth, async (req, res) => {
 
   // validate to see whether the contract is either 721 or 1155, otherwise, reject
 
-  try {
-    let is721 = await isvalidERC721(erc721Address);
-    if (!is721) {
-      let is1155 = await isValidERC1155(erc721Address);
-      if (!is1155)
-        return res.status(400).json({
-          status: "failed",
-          data: "Invalid NFT Collection Address",
-        });
-    }
-  } catch (error) {
-    Logger.error(error);
-    return res.status(400).json({
-      status: "failed",
-      data: "",
-    });
-  }
+  // try {
+  //   let is721 = await isvalidERC721(erc721Address);
+  //   if (!is721) {
+  //     let is1155 = await isValidERC1155(erc721Address);
+  //     if (!is1155)
+  //       return res.status(400).json({
+  //         status: "failed",
+  //         data: "Invalid NFT Collection Address",
+  //       });
+  //   }
+  // } catch (error) {
+  //   Logger.error(error);
+  //   return res.status(400).json({
+  //     status: "failed",
+  //     data: "",
+  //   });
+  // }
 
   let collectionName = req.body.collectionName;
   let description = req.body.description;
