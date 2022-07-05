@@ -511,7 +511,7 @@ router.post("/searchCollection", auth, async (req, res) => {
     });
 });
 
-router.get("/fetchAllCollections", auth, async (req, res) => {
+router.get("/fetchAllCollections", async (req, res) => {
   let all = await Collection.find({ isAppropriate: true }).sort({
     collectionName: 1,
   });
