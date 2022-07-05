@@ -77,7 +77,7 @@ router.post("/collectiondetails", auth, async (req, res) => {
   let retrievedAddr = req.body.signatureAddress;
 
   if (!ethers.utils.isAddress(erc721Address))
-    return res.json({
+    return res.status(400).json({
       status: "failed",
       data: "NFT Contract Address invalid",
     });
