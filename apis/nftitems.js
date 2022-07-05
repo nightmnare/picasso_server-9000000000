@@ -19,6 +19,7 @@ const BundleOffer = mongoose.model("BundleOffer");
 const TradeHistory = mongoose.model("TradeHistory");
 const UnlockableContents = mongoose.model("UnlockableContents");
 const DisabledExplorerCollection = mongoose.model("DisabledExplorerCollection");
+const seedrandom = require("seedrandom");
 
 const orderBy = require("lodash.orderby");
 const toLowerCase = require("../utils/utils");
@@ -920,6 +921,22 @@ router.get("/getAllnfts", async (req, res) => {
   } catch (error) {
     return res.status(400).json({ status: "failed" });
   }
+});
+
+router.get("/getTodayNfts", async (req, res) => {
+  try {
+    const nfts = await NFTITEM.find({}).sort({ liked: -1 }).limit(4);
+    return res.status(200).json({ status: "success", data: nfts });
+  } catch (error) {
+    return res.status(400).json({ status: "failed" });
+  }
+});
+
+router.get("/testRandomSeed", async (req, res) => {
+  const rng1 = seedrandom("hell.");
+  const rng2 = seedrandom("hello.");
+  console.log(rng1(), rng2(), Math.floor(new Date().getTime() / 86400000));
+  return res.json({ rng1, rng2 });
 });
 
 router.post("/getSingleItemDetails", async (req, res) => {
