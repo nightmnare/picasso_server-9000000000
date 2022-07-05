@@ -110,7 +110,7 @@ router.post("/collectiondetails", auth, async (req, res) => {
     Logger.error(error);
     return res.status(400).json({
       status: "failed",
-      data: "",
+      data: "Server Error",
     });
   }
 
@@ -266,6 +266,7 @@ router.post("/collectiondetails", auth, async (req, res) => {
     } else
       return res.send({
         status: "failed",
+        data: "Server Error",
       });
   }
 });
