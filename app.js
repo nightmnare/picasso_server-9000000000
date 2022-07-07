@@ -71,11 +71,11 @@ const connect = () => {
   const db = mongoose.connection;
   db.on("error", console.error.bind(console, "connection error:"));
   db.once("open", function () {
-    Logger.info("artion server has been connected to the db server");
+    Logger.info("picasso server has been connected to the db server");
     Logger.info("price feed has been started");
     priceFeed.runPriceFeed();
     app.listen(port, () => {
-      Logger.info(`artion server is running at port ${port}`);
+      Logger.info(`picasso server is running at port ${port}`);
     });
   });
 };

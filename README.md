@@ -1,17 +1,21 @@
-# Artion-Server
-Code for server side deployment of Fantom Artion Marketplace.
+# Picasso-Server
+
+Code for server side deployment of Fantom Picasso Marketplace.
 
 ## Project Setup
+
 ```
 npm install 
 ```
 
 ## Compile
+
 ```
 npm run start / npm run dev (nodemon)
 ```
 
 #### .env file sample
+
 ```
 JWT_SECRET=
 NETWORK_RPC=
