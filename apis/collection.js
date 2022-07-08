@@ -11,6 +11,9 @@ const Account = mongoose.model("Account");
 const ERC1155CONTRACT = mongoose.model("ERC1155CONTRACT");
 const ERC721CONTRACT = mongoose.model("ERC721CONTRACT");
 
+const SimplifiedERC721ABI = require("../constants/simplifiederc721abi");
+const SimplifiedERC1155ABI = require("../constants/simplifiederc1155abi");
+
 const auth = require("./middleware/auth");
 const admin_auth = require("./middleware/auth.admin");
 const toLowerCase = require("../utils/utils");
@@ -41,6 +44,19 @@ const marketplaceSC = new ethers.Contract(
   ownerWallet
 );
 
+const loadedContracts = new Map();
+
+const loadContract = (contractAddress, tokenType) => {
+  let sc = loadedContracts.get(contractAddress);
+  if (sc) return sc;
+  else {
+    let abi = tokenType == 721 ? SimplifiedERC721ABI : SimplifiedERC1155ABI;
+    sc = new ethers.Contract(contractAddress, abi, provider);
+    loadedContracts.set(contractAddress, sc);
+    return sc;
+  }
+};
+
 router.post("/test", async (req, res) => {
   const { address } = req.body;
   console.log(address);
@@ -69,6 +85,7 @@ router.post("/test", async (req, res) => {
 });
 
 router.post("/collectiondetails", auth, async (req, res) => {
+  let { isOwner } = req.body;
   let erc721Address = req.body.erc721Address;
   erc721Address = toLowerCase(erc721Address);
 
@@ -96,7 +113,6 @@ router.post("/collectiondetails", auth, async (req, res) => {
   // validate to see whether the contract is either 721 or 1155, otherwise, reject
 
   try {
-    console.log("added to collection", erc721Address);
     let is721 = await isvalidERC721(erc721Address);
     if (!is721) {
       let is1155 = await isValidERC1155(erc721Address);
@@ -111,6 +127,25 @@ router.post("/collectiondetails", auth, async (req, res) => {
     return res.status(400).json({
       status: "failed",
       data: "Server Error",
+    });
+  }
+
+  try {
+    if (isOwner) {
+      let sc = loadContract(erc721Address, 721);
+      let collectionOwner = await sc.owner();
+      console.log(owner, collectionOwner);
+      if (owner.toLowerCase() != collectionOwner.toLowerCase())
+        return res.status(400).json({
+          status: "failed",
+          data: "You are not the owner of collection",
+        });
+    }
+  } catch (error) {
+    Logger.error(error);
+    return res.status(400).json({
+      status: "failed",
+      data: "Can't get the owner of Collection. Use the NFT standard",
     });
   }
 
@@ -130,7 +165,21 @@ router.post("/collectiondetails", auth, async (req, res) => {
   let feeRecipient = req.body.feeRecipient
     ? toLowerCase(req.body.feeRecipient)
     : "";
+
+  if (!ethers.utils.isAddress(feeRecipient))
+    return res.status(400).json({
+      status: "failed",
+      data: "Fee Recipient Address invalid",
+    });
+
   let royalty = req.body.royalty ? parseFloat(req.body.royalty) : 0;
+
+  if (royalty > 10000 || royalty < 0) {
+    return res.status(400).json({
+      status: "failed",
+      data: "Royalty should be in range of 0 to 100",
+    });
+  }
 
   let collection = await Collection.findOne({ erc721Address: erc721Address });
   // verify if 1155 smart contracts
@@ -140,39 +189,78 @@ router.post("/collectiondetails", auth, async (req, res) => {
     erc721Address,
     !is1155
   );
+
   // this is for editing a collection
   if (collection) {
     // disable modifying an existing collection
-    return res.json({
-      status: "failed",
-      data: "NFT Contract Address already exists",
+    if (!isOwner) {
+      return res.status(400).json({
+        status: "failed",
+        data: "NFT Contract Address already registered by Non Owner",
+      });
+    }
+
+    let category = await Category.findOne({
+      minterAddress: erc721Address,
     });
 
-    //collection.erc721Address = erc721Address;
-    //collection.collectionName = collectionName;
-    //collection.description = description;
-    //collection.categories = categories;
-    //collection.logoImageHash = logoImageHash;
-    //collection.siteUrl = siteUrl;
-    //collection.discord = discord;
-    //collection.twitterHandle = twitterHandle;
-    //collection.mediumHandle = mediumHandle;
-    //collection.telegram = telegram;
-    //collection.instagramHandle = instagram;
-    //collection.email = email;
-    //collection.feeRecipient = feeRecipient;
-    //collection.royalty = royalty;
+    category.minterAddress = erc721Address;
+    category.type = 721;
+    await category.save();
 
-    //let _collection = await collection.save();
-    //if (_collection)
-    //  return res.send({
-    //    status: "success",
-    //    data: _collection.toJson(),
-    //  });
-    //else
-    //  return res.send({
-    //    status: "failed",
-    // });
+    let sc_721 = await ERC721CONTRACT.findOne({
+      address: erc721Address,
+    });
+
+    sc_721.name = collectionName;
+    await sc_721.save();
+
+    try {
+      // now update the collection fee
+      await marketplaceSC.registerCollectionRoyalty(
+        erc721Address,
+        owner,
+        royalty,
+        feeRecipient,
+        { gasLimit: 4000000 }
+      );
+    } catch (error) {
+      Logger.debug("error in setting collection royalty");
+      Logger.error(error);
+      return res.status(400).json({
+        status: "failed",
+        data: "Can't register Royalty to smart contract",
+      });
+    }
+
+    collection.erc721Address = erc721Address;
+    collection.collectionName = collectionName;
+    collection.owner = owner;
+    collection.description = description;
+    collection.categories = categories;
+    collection.logoImageHash = logoImageHash;
+    collection.siteUrl = siteUrl;
+    collection.discord = discord;
+    collection.twitterHandle = twitterHandle;
+    collection.mediumHandle = mediumHandle;
+    collection.telegram = telegram;
+    collection.instagramHandle = instagram;
+    collection.email = email;
+    collection.feeRecipient = feeRecipient;
+    collection.royalty = royalty;
+    collection.registeredByOwner = true;
+
+    let _collection = await collection.save();
+    if (_collection)
+      return res.send({
+        status: "success",
+        data: _collection.toJson(),
+      });
+    else
+      return res.status(400).json({
+        status: "failed",
+        data: "Server Error",
+      });
   } else {
     /* this is for new collection review */
     if (is1155) {
@@ -217,11 +305,29 @@ router.post("/collectiondetails", auth, async (req, res) => {
         category.type = 721;
         await category.save();
       } else {
-        return res.json({
+        return res.status(400).json({
           status: "failed",
           data: "Category minter address already exists!",
         });
       }
+    }
+
+    try {
+      // now update the collection fee
+      await marketplaceSC.registerCollectionRoyalty(
+        erc721Address,
+        owner,
+        royalty,
+        feeRecipient,
+        { gasLimit: 4000000 }
+      );
+    } catch (error) {
+      Logger.debug("error in setting collection royalty");
+      Logger.error(error);
+      return res.status(400).json({
+        status: "failed",
+        data: "Can't register Royalty to smart contract",
+      });
     }
     // add a new collection
     let _collection = new Collection();
@@ -237,17 +343,19 @@ router.post("/collectiondetails", auth, async (req, res) => {
     _collection.mediumHandle = mediumHandle;
     _collection.telegram = telegram;
     _collection.instagramHandle = instagram;
+    _collection.status = true;
 
     _collection.isInternal = isInternal[0];
     if (isInternal[0]) {
       _collection.isOwnerble = isInternal[1];
-      _collection.status = true;
-    } else _collection.status = false;
+    }
     _collection.email = email;
     _collection.feeRecipient = feeRecipient;
     _collection.royalty = royalty;
     _collection.signature = signature;
     _collection.signatureAddress = retrievedAddr;
+    if (isOwner) _collection.registeredByOwner = true;
+    else _collection.registeredByNonOwner = true;
 
     let newCollection = await _collection.save();
     if (newCollection) {
@@ -264,7 +372,7 @@ router.post("/collectiondetails", auth, async (req, res) => {
         data: newCollection.toJson(),
       });
     } else
-      return res.send({
+      return res.status(400).json({
         status: "failed",
         data: "Server Error",
       });
@@ -429,7 +537,6 @@ router.post("/reviewApplication", admin_auth, async (req, res) => {
           status: "success",
         });
       }
-      console.log("sdfsdf", collection);
 
       try {
         // now update the collection fee

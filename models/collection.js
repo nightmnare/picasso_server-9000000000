@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 const Collection = mongoose.Schema({
   erc721Address: { type: String, required: true },
@@ -22,7 +22,9 @@ const Collection = mongoose.Schema({
   feeRecipient: { type: String },
   signature: { type: String },
   signatureAddress: { type: String },
-  royalty: { type: Number, default: 0 }
+  royalty: { type: Number, default: 0 },
+  registeredByOwner: { type: Boolean, default: false },
+  registeredByNonOwner: { type: Boolean, default: false },
 });
 
 Collection.index({ erc721Address: 1 }, { unique: true });
@@ -50,8 +52,8 @@ Collection.methods.toJson = function () {
     feeRecipient: this.feeRecipient,
     signature: this.signature,
     signatureAddress: this.signatureAddress,
-    royalty: this.royalty
+    royalty: this.royalty,
   };
 };
 
-mongoose.model('Collection', Collection);
+mongoose.model("Collection", Collection);
