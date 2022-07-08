@@ -194,7 +194,7 @@ router.post("/collectiondetails", auth, async (req, res) => {
     if (!isOwner) {
       return res.status(400).json({
         status: "failed",
-        data: "NFT Contract Address already registered by Non Owner",
+        data: "NFT Contract Address already registered by Other User",
       });
     }
 
