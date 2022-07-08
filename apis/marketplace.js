@@ -20,7 +20,7 @@ const getCollectionName = require("../mailer/utils");
 const contractutils = require("../services/contract.utils");
 const toLowerCase = require("../utils/utils");
 const { getPrice } = require("../services/price.feed");
-const { PAYTOKENS, DISABLED_PAYTOKENS } = require('../constants/tokens');
+const { PAYTOKENS, DISABLED_PAYTOKENS } = require("../constants/tokens");
 
 const getNFTItemName = async (nft, tokenID) => {
   try {
@@ -65,12 +65,25 @@ const isOfferCancelNotifiable = async (receiver, nft, tokenID) => {
 router.post("/itemListed", service_auth, async (req, res) => {
   try {
     const { args, blockNumber, transactionHash } = req.body;
-    const [ ownerC, nftC, tokenIdBN, quantityBN, paytokenC, pricePerItemBN, startingTimeBN ] = args;
+    const [
+      ownerC,
+      nftC,
+      tokenIdBN,
+      quantityBN,
+      paytokenC,
+      pricePerItemBN,
+      startingTimeBN,
+    ] = args;
 
     const owner = ownerC.toLowerCase();
     const nft = nftC.toLowerCase();
-    const itemPayToken = [...PAYTOKENS, ...DISABLED_PAYTOKENS].find((token) => token.address.toLowerCase() === paytokenC.toLowerCase());
-    const pricePerItem = ethers.utils.formatUnits(ethers.BigNumber.from(pricePerItemBN.hex), itemPayToken.decimals);
+    const itemPayToken = [...PAYTOKENS, ...DISABLED_PAYTOKENS].find(
+      (token) => token.address.toLowerCase() === paytokenC.toLowerCase()
+    );
+    const pricePerItem = ethers.utils.formatUnits(
+      ethers.BigNumber.from(pricePerItemBN.hex),
+      itemPayToken.decimals
+    );
     const tokenId = parseInt(tokenIdBN.hex);
     const quantity = parseInt(quantityBN.hex);
     const startingTime = parseInt(startingTimeBN.hex) * 1000;
@@ -82,7 +95,7 @@ router.post("/itemListed", service_auth, async (req, res) => {
       let token = await NFTITEM.findOne({
         contractAddress: nft,
         tokenID: tokenId,
-        blockNumber: { $lt: blockNumber }
+        blockNumber: { $lt: blockNumber },
       });
       if (token) {
         token.price = pricePerItem;
@@ -98,7 +111,7 @@ router.post("/itemListed", service_auth, async (req, res) => {
       owner: owner,
       minter: nft,
       tokenID: tokenId,
-      blockNumber: { $lt: blockNumber }
+      blockNumber: { $lt: blockNumber },
     });
 
     try {
@@ -134,14 +147,17 @@ router.post("/itemListed", service_auth, async (req, res) => {
         pricePerItem,
         itemPayToken.address
       );
-    } catch(err) {
+    } catch (err) {
       Logger.error("[ItemListed] Failed to notify followers: ", err.message);
     }
 
     Logger.info("[ItemListed] Success: ", { transactionHash, blockNumber });
-    return res.json({status: "success"});
+    return res.json({ status: "success" });
   } catch (error) {
-    Logger.info("[ItemListed] Failed: ", { transactionHash: req.body.transactionHash, blockNumber: req.body.blockNumber });
+    Logger.info("[ItemListed] Failed: ", {
+      transactionHash: req.body.transactionHash,
+      blockNumber: req.body.blockNumber,
+    });
     Logger.error(error);
 
     return res.status(400).json({ status: "failed", error });
@@ -151,14 +167,31 @@ router.post("/itemListed", service_auth, async (req, res) => {
 router.post("/itemSold", service_auth, async (req, res) => {
   try {
     const { args, blockNumber, transactionHash } = req.body;
-    const [ sellerC, buyerC, nftC, tokenIdBN, quantityBN, paytokenC, unitPriceBN, pricePerItemBN ] = args;
+    const [
+      sellerC,
+      buyerC,
+      nftC,
+      tokenIdBN,
+      quantityBN,
+      paytokenC,
+      unitPriceBN,
+      pricePerItemBN,
+    ] = args;
 
     const seller = sellerC.toLowerCase();
     const buyer = buyerC.toLowerCase();
     const nft = nftC.toLowerCase();
-    const itemPayToken = [...PAYTOKENS, ...DISABLED_PAYTOKENS].find((token) => token.address.toLowerCase() === paytokenC.toLowerCase());
-    const unitPrice = ethers.utils.formatUnits(ethers.BigNumber.from(unitPriceBN.hex), itemPayToken.decimals);
-    const pricePerItem = ethers.utils.formatUnits(ethers.BigNumber.from(pricePerItemBN.hex), itemPayToken.decimals);
+    const itemPayToken = [...PAYTOKENS, ...DISABLED_PAYTOKENS].find(
+      (token) => token.address.toLowerCase() === paytokenC.toLowerCase()
+    );
+    const unitPrice = ethers.utils.formatUnits(
+      ethers.BigNumber.from(unitPriceBN.hex),
+      itemPayToken.decimals
+    );
+    const pricePerItem = ethers.utils.formatUnits(
+      ethers.BigNumber.from(pricePerItemBN.hex),
+      itemPayToken.decimals
+    );
     const tokenId = parseInt(tokenIdBN.hex);
     const quantity = parseInt(quantityBN.hex);
 
@@ -187,9 +220,9 @@ router.post("/itemSold", service_auth, async (req, res) => {
 
       try {
         // send mail here to buyer first
-        let account = await Account.findOne({address: buyer});
+        let account = await Account.findOne({ address: buyer });
         // checks if user listens
-        let ns = await NotificationSetting.findOne({address: buyer});
+        let ns = await NotificationSetting.findOne({ address: buyer });
         if (account && ns.sNftBuy) {
           let to = account.email;
           let alias = account.alias;
@@ -213,13 +246,13 @@ router.post("/itemSold", service_auth, async (req, res) => {
           await sendEmail(data);
         }
       } catch (err) {
-        Logger.error("[ItemSold] Failed to notify buyer: ", err.message)
+        Logger.error("[ItemSold] Failed to notify buyer: ", err.message);
       }
 
       try {
         // checks if user listens
-        const account = await Account.findOne({address: seller});
-        const ns = await NotificationSetting.findOne({address: seller});
+        const account = await Account.findOne({ address: seller });
+        const ns = await NotificationSetting.findOne({ address: seller });
         if (account && ns.sNftSell) {
           let to = account.email;
           let alias = account.alias;
@@ -247,9 +280,11 @@ router.post("/itemSold", service_auth, async (req, res) => {
       }
     }
 
-      // add new trade history
+    // add new trade history
     try {
-      const existingHistory = await TradeHistory.find({ txHash: transactionHash });
+      const existingHistory = await TradeHistory.find({
+        txHash: transactionHash,
+      });
       if (!existingHistory.length) {
         history = new TradeHistory();
         history.collectionAddress = nft;
@@ -264,7 +299,7 @@ router.post("/itemSold", service_auth, async (req, res) => {
         await history.save();
       }
     } catch (err) {
-      Logger.error("[ItemSold] Failed to save new TradeHistory: ", err.message)
+      Logger.error("[ItemSold] Failed to save new TradeHistory: ", err.message);
     }
 
     // remove from listing
@@ -272,13 +307,16 @@ router.post("/itemSold", service_auth, async (req, res) => {
       owner: seller,
       minter: nft,
       tokenID: tokenId,
-      blockNumber: { $lte: blockNumber}
+      blockNumber: { $lte: blockNumber },
     });
 
     Logger.info("[ItemSold] Success: ", { transactionHash, blockNumber });
-    return res.json({status: "success"});
+    return res.json({ status: "success" });
   } catch (error) {
-    Logger.info("[ItemSold] Failed: ", { transactionHash: req.body.transactionHash, blockNumber: req.body.blockNumber });
+    Logger.info("[ItemSold] Failed: ", {
+      transactionHash: req.body.transactionHash,
+      blockNumber: req.body.blockNumber,
+    });
     Logger.error(error);
 
     return res.status(400).json({ status: "failed", error });
@@ -288,24 +326,29 @@ router.post("/itemSold", service_auth, async (req, res) => {
 
 router.post("/itemUpdated", service_auth, async (req, res) => {
   try {
-    const {args, blockNumber, transactionHash } = req.body;
+    const { args, blockNumber, transactionHash } = req.body;
     const [ownerC, nftC, tokenIdBN, paytokenC, newPricePerItemBN] = args;
 
     const owner = ownerC.toLowerCase();
     const nft = nftC.toLowerCase();
-    const itemPayToken = [...PAYTOKENS, ...DISABLED_PAYTOKENS].find((token) => token.address.toLowerCase() === paytokenC.toLowerCase());
-    const newPricePerItem = ethers.utils.formatUnits(ethers.BigNumber.from(newPricePerItemBN.hex), itemPayToken.decimals);
+    const itemPayToken = [...PAYTOKENS, ...DISABLED_PAYTOKENS].find(
+      (token) => token.address.toLowerCase() === paytokenC.toLowerCase()
+    );
+    const newPricePerItem = ethers.utils.formatUnits(
+      ethers.BigNumber.from(newPricePerItemBN.hex),
+      itemPayToken.decimals
+    );
     const tokenId = parseInt(tokenIdBN.hex);
     const newPriceInUSD = newPricePerItem * getPrice(itemPayToken.address);
 
     // update the price of the nft here
     // first update the token price
-    let category = await Category.findOne({minterAddress: nft});
+    let category = await Category.findOne({ minterAddress: nft });
     if (category) {
       let token = await NFTITEM.findOne({
         contractAddress: nft,
         tokenID: tokenId,
-        blockNumber: {$lt: blockNumber}
+        blockNumber: { $lt: blockNumber },
       });
       if (token) {
         token.price = newPricePerItem;
@@ -318,7 +361,7 @@ router.post("/itemUpdated", service_auth, async (req, res) => {
       owner: owner,
       minter: nft,
       tokenID: tokenId,
-      blockNumber: {$lt: blockNumber},
+      blockNumber: { $lt: blockNumber },
     });
     if (list) {
       list.price = newPricePerItem;
@@ -330,15 +373,24 @@ router.post("/itemUpdated", service_auth, async (req, res) => {
 
     try {
       // send notification
-      await notifications.nofityNFTUpdated(owner, nft, tokenId, newPricePerItem, itemPayToken.address);
+      await notifications.nofityNFTUpdated(
+        owner,
+        nft,
+        tokenId,
+        newPricePerItem,
+        itemPayToken.address
+      );
     } catch (err) {
       Logger.error("[ItemUpdated] Failed to notify owner", err.message);
     }
 
     Logger.info("[ItemUpdated] Success: ", { transactionHash, blockNumber });
-    return res.json({status: "success"});
+    return res.json({ status: "success" });
   } catch (error) {
-    Logger.info("[ItemUpdated] Failed: ", { transactionHash: req.body.transactionHash, blockNumber: req.body.blockNumber });
+    Logger.info("[ItemUpdated] Failed: ", {
+      transactionHash: req.body.transactionHash,
+      blockNumber: req.body.blockNumber,
+    });
     Logger.error(error);
 
     return res.status(400).json({ status: "failed", error });
@@ -347,7 +399,7 @@ router.post("/itemUpdated", service_auth, async (req, res) => {
 
 router.post("/itemCanceled", service_auth, async (req, res) => {
   try {
-    const {args, blockNumber, transactionHash} = req.body;
+    const { args, blockNumber, transactionHash } = req.body;
     const [ownerC, nftC, tokenIdBN] = args;
 
     const owner = ownerC.toLowerCase();
@@ -359,7 +411,7 @@ router.post("/itemCanceled", service_auth, async (req, res) => {
       let token = await NFTITEM.findOne({
         contractAddress: nft,
         tokenID: tokenId,
-        blockNumber: {$lt: blockNumber},
+        blockNumber: { $lt: blockNumber },
       });
       if (token) {
         token.price = 0;
@@ -374,13 +426,16 @@ router.post("/itemCanceled", service_auth, async (req, res) => {
       owner: owner,
       minter: nft,
       tokenID: tokenId,
-      blockNumber: {$lt: blockNumber}
+      blockNumber: { $lt: blockNumber },
     });
 
     Logger.info("[ItemCanceled] Success: ", { transactionHash, blockNumber });
-    return res.json({status: "success"});
+    return res.json({ status: "success" });
   } catch (error) {
-    Logger.info("[ItemCanceled] Failed!: ", { transactionHash: req.body.transactionHash, blockNumber: req.body.blockNumber });
+    Logger.info("[ItemCanceled] Failed!: ", {
+      transactionHash: req.body.transactionHash,
+      blockNumber: req.body.blockNumber,
+    });
     Logger.error(error);
 
     return res.status(400).json({ status: "failed", error });
@@ -389,13 +444,26 @@ router.post("/itemCanceled", service_auth, async (req, res) => {
 
 router.post("/offerCreated", service_auth, async (req, res) => {
   try {
-    const {args, blockNumber, transactionHash} = req.body;
-    const [creatorC, nftC, tokenIdBN, quantityBN, paytokenC, pricePerItemBN, deadlineBN] = args;
+    const { args, blockNumber, transactionHash } = req.body;
+    const [
+      creatorC,
+      nftC,
+      tokenIdBN,
+      quantityBN,
+      paytokenC,
+      pricePerItemBN,
+      deadlineBN,
+    ] = args;
 
     const creator = creatorC.toLowerCase();
     const nft = nftC.toLowerCase();
-    const itemPayToken = [...PAYTOKENS, ...DISABLED_PAYTOKENS].find((token) => token.address.toLowerCase() === paytokenC.toLowerCase());
-    const pricePerItem = ethers.utils.formatUnits(ethers.BigNumber.from(pricePerItemBN.hex), itemPayToken.decimals);
+    const itemPayToken = [...PAYTOKENS, ...DISABLED_PAYTOKENS].find(
+      (token) => token.address.toLowerCase() === paytokenC.toLowerCase()
+    );
+    const pricePerItem = ethers.utils.formatUnits(
+      ethers.BigNumber.from(pricePerItemBN.hex),
+      itemPayToken.decimals
+    );
     const tokenId = parseInt(tokenIdBN.hex);
     const quantity = parseInt(quantityBN.hex);
     const deadline = parseInt(deadlineBN.hex) * 1000;
@@ -406,7 +474,7 @@ router.post("/offerCreated", service_auth, async (req, res) => {
         creator: creator,
         minter: nft,
         tokenID: tokenId,
-        blockNumber: {$lt: blockNumber},
+        blockNumber: { $lt: blockNumber },
       });
 
       const existingOffer = await Offer.find({
@@ -429,7 +497,10 @@ router.post("/offerCreated", service_auth, async (req, res) => {
         await offer.save();
       }
     } catch (error) {
-      Logger.error("[OfferCreated] Failed to create new offer: ", error.message);
+      Logger.error(
+        "[OfferCreated] Failed to create new offer: ",
+        error.message
+      );
     }
     // now send email to the owner
     try {
@@ -476,13 +547,16 @@ router.post("/offerCreated", service_auth, async (req, res) => {
         }
       }
     } catch (error) {
-      Logger.error("[OfferCreated] Failed to notify owner ", error.message)
+      Logger.error("[OfferCreated] Failed to notify owner ", error.message);
     }
 
     Logger.info("[OfferCreated] Success: ", { transactionHash, blockNumber });
-    return res.json({status: "success"});
+    return res.json({ status: "success" });
   } catch (error) {
-    Logger.info("[OfferCreated] Failed!: ", { transactionHash: req.body.transactionHash, blockNumber: req.body.blockNumber });
+    Logger.info("[OfferCreated] Failed!: ", {
+      transactionHash: req.body.transactionHash,
+      blockNumber: req.body.blockNumber,
+    });
     Logger.error(error);
 
     return res.status(400).json({ status: "failed", error });
@@ -491,7 +565,7 @@ router.post("/offerCreated", service_auth, async (req, res) => {
 
 router.post("/offerCanceled", service_auth, async (req, res) => {
   try {
-    const {args, blockNumber, transactionHash} = req.body;
+    const { args, blockNumber, transactionHash } = req.body;
     const [creatorC, nftC, tokenIdBN] = args;
 
     const creator = creatorC.toLowerCase();
@@ -502,7 +576,7 @@ router.post("/offerCanceled", service_auth, async (req, res) => {
       creator: creator,
       minter: nft,
       tokenID: tokenId,
-      blockNumber: {$lt: blockNumber},
+      blockNumber: { $lt: blockNumber },
     });
 
     // now send email
@@ -552,13 +626,16 @@ router.post("/offerCanceled", service_auth, async (req, res) => {
         }
       }
     } catch (error) {
-      Logger.error("[OfferCanceled] Failed to notify owner ", error.message)
+      Logger.error("[OfferCanceled] Failed to notify owner ", error.message);
     }
 
     Logger.info("[OfferCanceled] Success: ", { transactionHash, blockNumber });
-    return res.json({status: "success"});
+    return res.json({ status: "success" });
   } catch (error) {
-    Logger.info("[OfferCanceled] Failed!: ", { transactionHash: req.body.transactionHash, blockNumber: req.body.blockNumber });
+    Logger.info("[OfferCanceled] Failed!: ", {
+      transactionHash: req.body.transactionHash,
+      blockNumber: req.body.blockNumber,
+    });
     Logger.error(error);
 
     return res.status(400).json({ status: "failed", error });

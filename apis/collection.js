@@ -59,7 +59,6 @@ const loadContract = (contractAddress, tokenType) => {
 
 router.post("/test", async (req, res) => {
   const { address } = req.body;
-  console.log(address);
   try {
     let is721 = await isvalidERC721(address);
     if (!is721) {
@@ -85,7 +84,7 @@ router.post("/test", async (req, res) => {
 });
 
 router.post("/collectiondetails", auth, async (req, res) => {
-  let { isOwner } = req.body;
+  let { isOwner, isRegister } = req.body;
   let erc721Address = req.body.erc721Address;
   erc721Address = toLowerCase(erc721Address);
 
@@ -134,7 +133,6 @@ router.post("/collectiondetails", auth, async (req, res) => {
     if (isOwner) {
       let sc = loadContract(erc721Address, 721);
       let collectionOwner = await sc.owner();
-      console.log(owner, collectionOwner);
       if (owner.toLowerCase() != collectionOwner.toLowerCase())
         return res.status(400).json({
           status: "failed",
@@ -166,7 +164,7 @@ router.post("/collectiondetails", auth, async (req, res) => {
     ? toLowerCase(req.body.feeRecipient)
     : "";
 
-  if (!ethers.utils.isAddress(feeRecipient))
+  if (isRegister && !ethers.utils.isAddress(feeRecipient))
     return res.status(400).json({
       status: "failed",
       data: "Fee Recipient Address invalid",
@@ -312,23 +310,24 @@ router.post("/collectiondetails", auth, async (req, res) => {
       }
     }
 
-    try {
-      // now update the collection fee
-      await marketplaceSC.registerCollectionRoyalty(
-        erc721Address,
-        owner,
-        royalty,
-        feeRecipient,
-        { gasLimit: 4000000 }
-      );
-    } catch (error) {
-      Logger.debug("error in setting collection royalty");
-      Logger.error(error);
-      return res.status(400).json({
-        status: "failed",
-        data: "Can't register Royalty to smart contract",
-      });
-    }
+    if (isRegister)
+      try {
+        // now update the collection fee
+        await marketplaceSC.registerCollectionRoyalty(
+          erc721Address,
+          owner,
+          royalty,
+          feeRecipient,
+          { gasLimit: 4000000 }
+        );
+      } catch (error) {
+        Logger.debug("error in setting collection royalty");
+        Logger.error(error);
+        return res.status(400).json({
+          status: "failed",
+          data: "Can't register Royalty to smart contract",
+        });
+      }
     // add a new collection
     let _collection = new Collection();
     _collection.erc721Address = erc721Address;
@@ -452,7 +451,6 @@ router.get("/getCreator/:address", async (req, res) => {
 router.post("/getCreatorAndOwnerInfo", async (req, res) => {
   try {
     const { creator, owner } = req.body;
-    console.log(creator, owner);
     const creatorInfo = await getAccountInfo(creator);
     const ownerInfo = await getAccountInfo(owner);
     res.json({
