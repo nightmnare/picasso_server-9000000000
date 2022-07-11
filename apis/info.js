@@ -133,7 +133,7 @@ router.post("/searchNames", async (req, res) => {
         "thumbnailPath",
         "imageURL",
       ])
-      .limit(10);
+      .limit(5);
 
     let bundles = await Bundle.find({
       name: { $regex: name, $options: "i" },
