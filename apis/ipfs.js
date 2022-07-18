@@ -17,7 +17,7 @@ const toLowerCase = require("../utils/utils");
 
 const extractAddress = require("../services/address.utils");
 
-const ipfsUris = ["https://picasso.mypinata.cloud/ipfs/"];
+const ipfsUris = ["https://picassonfts.mypinata.cloud/ipfs/"];
 
 const uploadPath = process.env.UPLOAD_PATH;
 const pinata = pinataSDK(
