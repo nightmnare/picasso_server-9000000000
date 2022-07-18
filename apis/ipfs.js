@@ -458,43 +458,48 @@ router.post("/uploadCollectionImage2Server", auth, async (req, res) => {
         status: "failedParsingForm",
       });
     } else {
-      let imgData = fields.imgData;
-      let name = fields.collectionName;
-      // let address = fields.erc721Address;
-      // address = toLowerCase(address);
-
-      // change getting address from auth token
-      let address = extractAddress(req, res);
-
-      let extension = imgData.substring(
-        "data:image/".length,
-        imgData.indexOf(";base64")
-      );
-      let imageFileName = address + name.replace(" ", "") + "." + extension;
-      imgData = imgData.replace(`data:image\/${extension};base64,`, "");
-      fs.writeFile(uploadPath + imageFileName, imgData, "base64", (err) => {
-        if (err) {
-          Logger.error(err);
-          return res.status(400).json({
-            status: "failed to save an image file",
-            err,
-          });
-        }
-      });
-
-      let filePinStatus = await pinCollectionFileToIPFS(
-        imageFileName,
-        name,
-        address
-      );
-      // remove file once pinned
       try {
+        let imgData = fields.imgData;
+        let name = fields.collectionName;
+        // let address = fields.erc721Address;
+        // address = toLowerCase(address);
+
+        // change getting address from auth token
+        let address = extractAddress(req, res);
+
+        let extension = imgData.substring(
+          "data:image/".length,
+          imgData.indexOf(";base64")
+        );
+        let imageFileName = address + name.replace(" ", "") + "." + extension;
+
+        imgData = imgData.replace(`data:image\/${extension};base64,`, "");
+        fs.writeFile(uploadPath + imageFileName, imgData, "base64", (err) => {
+          if (err) {
+            Logger.error(err);
+            return res.status(400).json({
+              status: "failed to save an image file",
+              err,
+            });
+          }
+        });
+
+        let filePinStatus = await pinCollectionFileToIPFS(
+          imageFileName,
+          name,
+          address
+        );
+        // remove file once pinned
         fs.unlinkSync(uploadPath + imageFileName);
-      } catch (error) {}
-      return res.json({
-        status: "success",
-        data: filePinStatus.IpfsHash,
-      });
+        return res.json({
+          status: "success",
+          data: filePinStatus.IpfsHash,
+        });
+      } catch (error) {
+        return res.status(400).json({
+          status: "Pinata API KEY Error",
+        });
+      }
     }
   });
 });

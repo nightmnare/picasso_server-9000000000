@@ -84,6 +84,11 @@ router.post("/test", async (req, res) => {
 });
 
 router.post("/collectiondetails", auth, async (req, res) => {
+  if (!req.body.logoImageHash)
+    return res.status(400).json({
+      status: "failed",
+      data: "Image is not registered by Pinata Error",
+    });
   let { isOwner, isRegister } = req.body;
   let erc721Address = req.body.erc721Address;
   erc721Address = toLowerCase(erc721Address);
