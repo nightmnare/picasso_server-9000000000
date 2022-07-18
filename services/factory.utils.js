@@ -8,6 +8,8 @@ const provider = new ethers.providers.JsonRpcProvider(
 );
 
 let network = process.env.RUNTIME;
+//mainnet
+network = false;
 
 const loadContract = async (isPrivate, is721) => {
   let address;
@@ -31,6 +33,7 @@ const loadContract = async (isPrivate, is721) => {
 };
 
 const isInternalCollection = async (address, is721) => {
+  console.log("address", address);
   let private_sc = await loadContract(true, is721);
   let public_sc = await loadContract(false, is721);
   let isPrivate = await private_sc.exists(address);
