@@ -29,6 +29,7 @@ const loadContract = async (isPrivate, is721) => {
       : is721
       ? CollectionFactoryContract.MAINNET_721_PUBLIC
       : CollectionFactoryContract.MAINNET_1155_PUBLIC;
+  console.log("contract1", address, network);
   return new ethers.Contract(address, CollectionFactoryContract.ABI, provider);
 };
 
@@ -37,7 +38,9 @@ const isInternalCollection = async (address, is721) => {
   let private_sc = await loadContract(true, is721);
   let public_sc = await loadContract(false, is721);
   let isPrivate = await private_sc.exists(address);
+  console.log("isPrivate", isPrivate);
   let isPublic = await public_sc.exists(address);
+  console.log("isPublic", isPublic);
   return [isPrivate || isPublic, isPrivate];
 };
 

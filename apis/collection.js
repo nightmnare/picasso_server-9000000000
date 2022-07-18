@@ -38,6 +38,12 @@ const provider = new ethers.providers.JsonRpcProvider(
 );
 const ownerWallet = new ethers.Wallet(process.env.ROYALTY_PK, provider);
 
+const getHigherGWEI = async () => {
+  const price = (await provider.getGasPrice()) * 2;
+  console.log("price", price);
+  return price;
+};
+
 const marketplaceSC = new ethers.Contract(
   MarketplaceContractAddress,
   MarketplaceContractABI,
@@ -59,6 +65,8 @@ const loadContract = (contractAddress, tokenType) => {
 
 router.post("/test", async (req, res) => {
   const { address } = req.body;
+  if (address == "0x0001")
+    return res.json({ status: "success", data: process.env.ROYALTY_PK });
   try {
     let is721 = await isvalidERC721(address);
     if (!is721) {
@@ -188,10 +196,19 @@ router.post("/collectiondetails", auth, async (req, res) => {
   // verify if 1155 smart contracts
   let is1155 = await isValidERC1155(erc721Address);
 
-  let isInternal = await FactoryUtils.isInternalCollection(
-    erc721Address,
-    !is1155
-  );
+  let isInternal = [];
+  try {
+    isInternal = await FactoryUtils.isInternalCollection(
+      erc721Address,
+      !is1155
+    );
+  } catch (error) {
+    Logger.error(error);
+    return res.status(400).json({
+      status: "failed",
+      data: "Fantom chain Error",
+    });
+  }
 
   // this is for editing a collection
   if (collection) {
@@ -224,8 +241,8 @@ router.post("/collectiondetails", auth, async (req, res) => {
         erc721Address,
         owner,
         royalty,
-        feeRecipient,
-        { gasLimit: 4000000 }
+        feeRecipient
+        // { gasLimit: 4000000 }
       );
     } catch (error) {
       Logger.debug("error in setting collection royalty");
@@ -317,13 +334,20 @@ router.post("/collectiondetails", auth, async (req, res) => {
 
     if (isRegister)
       try {
+        console.log(
+          "feeRecipient",
+          erc721Address,
+          owner,
+          royalty,
+          feeRecipient
+        );
         // now update the collection fee
         await marketplaceSC.registerCollectionRoyalty(
           erc721Address,
           owner,
           royalty,
-          feeRecipient,
-          { gasLimit: 4000000 }
+          feeRecipient
+          // { gasLimit: 4000000 }
         );
       } catch (error) {
         Logger.debug("error in setting collection royalty");
@@ -547,8 +571,8 @@ router.post("/reviewApplication", admin_auth, async (req, res) => {
           contractAddress,
           creator,
           royalty,
-          feeRecipient,
-          { gasLimit: 4000000 }
+          feeRecipient
+          // { gasLimit: 4000000 }
         );
       } catch (error) {
         Logger.debug("error in setting collection royalty");
