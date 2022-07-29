@@ -92,17 +92,6 @@ router.post("/test", async (req, res) => {
 });
 
 router.post("/collectiondetails", auth, async (req, res) => {
-  await provider.getBlockNumber().then((result) => {
-    console.log(result);
-  });
-  const aaa = await marketplaceSC.collectionRoyalties(
-    "0x9c13409ac2c99aa9046e56956d6a015a1f92887a"
-    // "0xfa7c3d46d03a0c619180922822edee8a0cf6b94a",
-    // 1,
-    // "0xfa7c3d46d03a0c619180922822edee8a0cf6b94a"
-  );
-  console.log(aaa);
-  return res.json({ data: "ferer" });
   if (!req.body.logoImageHash)
     return res.status(400).json({
       status: "failed",
