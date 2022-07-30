@@ -352,6 +352,12 @@ router.post("/collectiondetails", auth, async (req, res) => {
       } catch (error) {
         Logger.debug("error in setting collection royalty");
         Logger.error(error);
+        await Category.findOneAndRemove({
+          minterAddress: erc721Address,
+        });
+        await ERC721CONTRACT.findOneAndRemove({
+          address: erc721Address,
+        });
         return res.status(400).json({
           status: "failed",
           data: "Can't register Royalty to smart contract",
